@@ -1,0 +1,18 @@
+[package]
+name = "vibly-preview"
+version = "0.1.0"
+description = "Vibly preview app shell"
+authors = ["Codex"]
+edition = "2021"
+
+[lib]
+name = "vibly_preview_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = { version = "2", features = [] }
