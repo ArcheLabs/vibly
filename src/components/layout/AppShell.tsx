@@ -26,10 +26,10 @@ export function AppShell() {
   const overlayAgent = overlay?.type === 'agent' ? agents.find((agent) => agent.id === overlay.id) : null
 
   return (
-    <div className="relative flex min-h-screen bg-transparent p-4">
-      <div className="glass relative flex min-h-[calc(100vh-32px)] w-full overflow-hidden rounded-[36px] border border-white/70 shadow-panel">
+    <div className="relative flex min-h-screen bg-app text-primary">
+      <div className="relative flex min-h-screen w-full overflow-hidden border border-default bg-panel">
         <SideNav activePage={currentPage} onSelect={(page) => navigate(`/${page}`)} />
-        <div className="flex min-w-0 flex-1">
+        <div className="flex min-w-0 flex-1 bg-surface">
           <Outlet />
         </div>
         {overlay ? (
@@ -37,7 +37,7 @@ export function AppShell() {
             <button
               type="button"
               onClick={closeOverlay}
-              className="absolute inset-0 bg-stone-900/10"
+              className="absolute inset-0 bg-black/25"
               aria-label="close profile overlay"
             />
             {overlayUser ? (

@@ -2,34 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  font-family: "IBM Plex Sans", "Noto Sans SC", "Segoe UI", sans-serif;
-  color: #151515;
-  background:
-    radial-gradient(circle at top left, rgba(200, 220, 237, 0.75), transparent 32%),
-    radial-gradient(circle at bottom right, rgba(216, 109, 71, 0.18), transparent 24%),
-    linear-gradient(180deg, #f8f5ef 0%, #f2ebdf 100%);
-  text-rendering: optimizeLegibility;
-  font-synthesis: none;
-  font-weight: 400;
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
 * {
   box-sizing: border-box;
-}
-
-html,
-body,
-#root {
-  margin: 0;
-  min-height: 100%;
-}
-
-body {
-  min-height: 100vh;
 }
 
 button,
@@ -45,12 +19,7 @@ textarea {
 
 ::-webkit-scrollbar-thumb {
   border: 2px solid transparent;
-  border-radius: 9999px;
-  background: rgba(107, 114, 128, 0.35);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--text-muted) 40%, transparent);
   background-clip: content-box;
-}
-
-.glass {
-  background: rgba(255, 253, 249, 0.74);
-  backdrop-filter: blur(16px);
 }

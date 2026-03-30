@@ -1,0 +1,99 @@
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg-app);
+  color: var(--text-primary);
+  font-family: 'IBM Plex Sans', 'Noto Sans SC', 'Segoe UI', sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.bg-app {
+  background-color: var(--bg-app);
+}
+
+.bg-panel {
+  background-color: var(--bg-panel);
+}
+
+.bg-surface {
+  background-color: var(--bg-surface);
+}
+
+.bg-muted {
+  background-color: var(--bg-muted);
+}
+
+.bg-accent {
+  background-color: var(--accent);
+}
+
+.bg-accent-foreground {
+  background-color: var(--accent-foreground);
+}
+
+.text-primary {
+  color: var(--text-primary);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+.text-accent {
+  color: var(--accent);
+}
+
+.text-accent-foreground {
+  color: var(--accent-foreground);
+}
+
+.border-default {
+  border-color: var(--border-default);
+}
+
+.border-strong {
+  border-color: var(--border-strong);
+}
+
+.border-accent {
+  border-color: var(--accent);
+}
+
+.accent {
+  color: var(--accent);
+}
+
+.accent-foreground {
+  color: var(--accent-foreground);
+}
+
+.hover-bg-muted:hover {
+  background-color: var(--bg-muted);
+}
+
+.hover-border-strong:hover {
+  border-color: var(--border-strong);
+}
+
+.hover-text-primary:hover {
+  color: var(--text-primary);
+}
+
+.hover-opacity-90:hover {
+  opacity: 0.9;
+}
+
+.focus-border-strong:focus {
+  border-color: var(--border-strong);
+}

@@ -21,7 +21,7 @@ export function MessageList({ conversation, messages }: MessageListProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {messages.map((message) => {
         if (message.type === 'system') {
           return <SystemMessage key={message.id} text={message.text} />

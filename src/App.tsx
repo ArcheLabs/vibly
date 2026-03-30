@@ -85,11 +85,8 @@ export default function App() {
     setSelectedConversationId(conversationId)
     if (!conversationId) return
     setConversations((items) =>
-      moveConversationToFront(
-        items.map((conversation) =>
-          conversation.id === conversationId ? { ...conversation, unreadCount: 0 } : conversation,
-        ),
-        conversationId,
+      items.map((conversation) =>
+        conversation.id === conversationId ? { ...conversation, unreadCount: 0 } : conversation,
       ),
     )
   }

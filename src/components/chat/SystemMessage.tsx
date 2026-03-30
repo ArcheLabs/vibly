@@ -5,7 +5,7 @@ type SystemMessageProps = {
 export function SystemMessage({ text }: SystemMessageProps) {
   return (
     <div className="flex justify-center">
-      <div className="rounded-full bg-stone-200/80 px-4 py-2 text-xs text-stone-600">{text}</div>
+      <div className="rounded-sm border border-default bg-muted px-3 py-1.5 text-xs text-muted">{text}</div>
     </div>
   )
 }

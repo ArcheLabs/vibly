@@ -14,19 +14,19 @@ export function EmptyState({
   onAction,
 }: EmptyStateProps) {
   return (
-    <div className="flex h-full min-h-[260px] flex-col items-center justify-center rounded-[28px] border border-dashed border-stone-300 bg-white/60 p-10 text-center shadow-panel">
+    <div className="flex h-full min-h-[220px] flex-col items-center justify-center border border-default bg-panel p-8 text-center">
       {eyebrow ? (
-        <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.28em] text-stone-500">
+        <p className="mb-2 text-[11px] uppercase tracking-[0.2em] text-muted">
           {eyebrow}
         </p>
       ) : null}
-      <h2 className="font-display text-2xl font-semibold text-ink">{title}</h2>
-      <p className="mt-3 max-w-md text-sm text-stone-600">{description}</p>
+      <h2 className="text-xl font-semibold text-primary">{title}</h2>
+      <p className="mt-2 max-w-md text-sm text-secondary">{description}</p>
       {actionLabel && onAction ? (
         <button
           type="button"
           onClick={onAction}
-          className="mt-6 rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-white transition hover:bg-stone-800"
+          className="mt-5 rounded-md border border-accent bg-accent px-4 py-2 text-sm font-medium text-accent-foreground hover-opacity-90"
         >
           {actionLabel}
         </button>

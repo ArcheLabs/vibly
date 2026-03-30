@@ -5,9 +5,9 @@ type NoticeCardProps = {
 
 export function NoticeCard({ title, description }: NoticeCardProps) {
   return (
-    <div className="rounded-[24px] border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
-      <p className="font-semibold">{title}</p>
-      <p className="mt-2 text-amber-800">{description}</p>
+    <div className="rounded-md border border-default bg-muted px-3 py-3 text-sm text-secondary">
+      <p className="font-semibold text-primary">{title}</p>
+      <p className="mt-1.5">{description}</p>
     </div>
   )
 }

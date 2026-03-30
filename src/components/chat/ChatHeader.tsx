@@ -1,74 +1,85 @@
-import { ChevronDown, CircleDollarSign, PanelRightOpen } from 'lucide-react'
-import { Avatar } from '@/components/common/Avatar'
-import { Badge } from '@/components/common/Badge'
-import type { Conversation, Identity } from '@/types'
+import { PanelLeftOpen, X } from 'lucide-react'
+import { Avatar } from '@/components/ui/Avatar'
+import { Badge } from '@/components/ui/Badge'
+import { Dropdown } from '@/components/ui/Dropdown'
+import { IconButton } from '@/components/ui/IconButton'
+import type { Conversation } from '@/types'
+
+type HeaderTarget = 'human' | 'agent'
 
 type ChatHeaderProps = {
   conversation: Conversation
-  currentIdentity: Identity
-  onOpenUserProfile: () => void
-  onOpenAgentProfile?: () => void
-  onToggleIdentitySwitcher: () => void
+  targetView: HeaderTarget
+  targetMenuOpen: boolean
+  onTargetMenuOpenChange: (open: boolean) => void
+  onTargetViewChange: (target: HeaderTarget) => void
+  onOpenTargetProfile: () => void
+  onToggleList: () => void
   onClearSelection: () => void
 }
 
 export function ChatHeader({
   conversation,
-  currentIdentity,
-  onOpenUserProfile,
-  onOpenAgentProfile,
-  onToggleIdentitySwitcher,
+  targetView,
+  targetMenuOpen,
+  onTargetMenuOpenChange,
+  onTargetViewChange,
+  onOpenTargetProfile,
+  onToggleList,
   onClearSelection,
 }: ChatHeaderProps) {
-  const isAgentConversation = conversation.targetType === 'agent'
+  const isViewingAgent = targetView === 'agent'
+  const title = isViewingAgent ? conversation.agentName : conversation.humanName
+  const description = isViewingAgent ? `来自 ${conversation.humanName} 的智能体` : '单聊会话'
+  const hasAgentTarget = conversation.targetType === 'agent' && Boolean(conversation.agentName)
 
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-stone-200/80 px-6 py-5">
-      <div className="flex min-w-0 items-center gap-4">
-        <Avatar label={conversation.humanName} tone="human" onClick={onOpenUserProfile} />
-        {isAgentConversation && conversation.agentName ? (
-          <Avatar label={conversation.agentName} tone="agent" onClick={onOpenAgentProfile} />
-        ) : null}
+    <div className="flex items-center justify-between gap-3 border-b border-default px-3 py-3 lg:px-4">
+      <div className="flex min-w-0 items-center gap-3">
+        <IconButton className="lg:hidden" onClick={onToggleList} aria-label="打开会话列表">
+          <PanelLeftOpen className="h-4 w-4" />
+        </IconButton>
+        <Avatar
+          label={title ?? conversation.humanName}
+          tone={isViewingAgent ? 'agent' : 'human'}
+          onClick={onOpenTargetProfile}
+        />
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <h2 className="truncate font-display text-2xl font-semibold text-ink">
-              {conversation.targetType === 'human' ? conversation.humanName : conversation.agentName}
-            </h2>
-            {conversation.state === 'restricted' ? (
-              <Badge label="收费中" variant="warning" />
-            ) : null}
-            {conversation.state === 'paused' ? <Badge label="已暂停" variant="muted" /> : null}
+            <h2 className="truncate text-base font-semibold text-primary">{title}</h2>
+            {conversation.state === 'restricted' ? <Badge label="受限" variant="warning" /> : null}
+            {conversation.state === 'paused' ? <Badge label="暂停" variant="muted" /> : null}
           </div>
-          <p className="mt-1 text-sm text-stone-500">
-            {conversation.targetType === 'human'
-              ? '真人会话 · 可直接发送'
-              : `${conversation.humanName} 的智能体 · ${conversation.state === 'paused' ? '暂不可用' : '可公开访问'}`}
-          </p>
+          <p className="truncate text-xs text-muted">{description}</p>
         </div>
       </div>
-      <div className="flex items-center gap-3">
-        {conversation.state === 'restricted' ? (
-          <div className="hidden items-center gap-2 rounded-full bg-amber-50 px-4 py-2 text-sm text-amber-700 md:flex">
-            <CircleDollarSign className="h-4 w-4" />
-            <span>继续交流前需确认费用</span>
-          </div>
-        ) : null}
-        <button
-          type="button"
-          onClick={onToggleIdentitySwitcher}
-          className="flex items-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-2.5 text-sm font-medium text-ink shadow-sm transition hover:border-stone-300"
-        >
-          <span>当前以 {currentIdentity.name}</span>
-          <ChevronDown className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          onClick={onClearSelection}
-          className="rounded-full border border-stone-200 bg-white p-2.5 text-stone-500 shadow-sm transition hover:border-stone-300 hover:text-ink"
-          aria-label="clear conversation"
-        >
-          <PanelRightOpen className="h-4 w-4" />
-        </button>
+      <div className="flex items-center gap-2">
+        <Dropdown
+          label={isViewingAgent ? '对方对象: 智能体' : '对方对象: 联系人'}
+          open={targetMenuOpen}
+          onOpenChange={onTargetMenuOpenChange}
+          options={[
+            {
+              key: 'human',
+              label: `联系人: ${conversation.humanName}`,
+              active: targetView === 'human',
+              onSelect: () => onTargetViewChange('human'),
+            },
+            ...(hasAgentTarget
+              ? [
+                  {
+                    key: 'agent',
+                    label: `智能体: ${conversation.agentName}`,
+                    active: targetView === 'agent',
+                    onSelect: () => onTargetViewChange('agent'),
+                  },
+                ]
+              : []),
+          ]}
+        />
+        <IconButton onClick={onClearSelection} aria-label="清空选中会话">
+          <X className="h-4 w-4" />
+        </IconButton>
       </div>
     </div>
   )

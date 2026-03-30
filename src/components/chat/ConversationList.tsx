@@ -9,7 +9,7 @@ type ConversationListProps = {
 
 export function ConversationList({ items, activeId, onSelect }: ConversationListProps) {
   return (
-    <div className="space-y-3">
+    <div>
       {items.map((item) => (
         <ConversationListItem
           key={item.id}
