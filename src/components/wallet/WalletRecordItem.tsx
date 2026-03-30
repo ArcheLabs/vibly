@@ -13,20 +13,20 @@ export function WalletRecordItem({ record, active, onClick }: WalletRecordItemPr
       type="button"
       onClick={onClick}
       className={cn(
-        'w-full rounded-[24px] border p-4 text-left transition',
-        active ? 'border-stone-900 bg-stone-900 text-white' : 'border-transparent bg-white/80 hover:bg-white',
+        'w-full border-b border-default bg-surface px-3 py-3 text-left transition',
+        active ? 'bg-muted' : 'hover-bg-muted',
       )}
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="font-medium">{record.title}</p>
-          <p className={cn('mt-1 text-xs', active ? 'text-white/70' : 'text-stone-500')}>{record.remark}</p>
+          <p className="text-sm font-medium text-primary">{record.title}</p>
+          <p className="mt-1 text-xs text-muted">{record.remark}</p>
         </div>
-        <div className={cn('text-sm font-semibold', record.type === 'income' ? 'text-emerald-500' : 'text-coral')}>
+        <div className={cn('text-sm font-semibold', record.type === 'income' ? 'text-accent' : 'text-secondary')}>
           {record.amount}
         </div>
       </div>
-      <p className={cn('mt-3 text-xs', active ? 'text-white/70' : 'text-stone-400')}>{record.time}</p>
+      <p className="mt-2 text-xs text-muted">{record.time}</p>
     </button>
   )
 }

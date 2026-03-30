@@ -1,16 +1,14 @@
-import type { ReactNode } from 'react'
 import { Search } from 'lucide-react'
 
 type SearchBarProps = {
   value: string
   onChange: (value: string) => void
   placeholder: string
-  rightSlot?: ReactNode
 }
 
-export function SearchBar({ value, onChange, placeholder, rightSlot }: SearchBarProps) {
+export function SearchBar({ value, onChange, placeholder }: SearchBarProps) {
   return (
-    <label className="flex items-center gap-2 rounded-md border border-default bg-surface px-3 py-2">
+    <label className="flex items-center gap-2 rounded-full border border-default bg-surface px-4 py-2">
       <Search className="h-4 w-4 text-muted" />
       <input
         value={value}
@@ -18,7 +16,6 @@ export function SearchBar({ value, onChange, placeholder, rightSlot }: SearchBar
         placeholder={placeholder}
         className="w-full border-none bg-transparent text-sm text-primary outline-none placeholder:text-muted"
       />
-      {rightSlot ? <div className="flex items-center gap-1">{rightSlot}</div> : null}
     </label>
   )
 }

@@ -1,7 +1,6 @@
 import { MessageBubble } from './MessageBubble'
 import { NoticeCard } from './NoticeCard'
 import { SystemMessage } from './SystemMessage'
-import { EmptyState } from '@/components/common/EmptyState'
 import type { Conversation, Message } from '@/types'
 
 type MessageListProps = {
@@ -12,11 +11,7 @@ type MessageListProps = {
 export function MessageList({ conversation, messages }: MessageListProps) {
   if (messages.length === 0) {
     return (
-      <EmptyState
-        eyebrow="No Messages"
-        title="暂无聊天记录"
-        description="当前会话已经建立，但还没有消息。发送第一条消息开始交流。"
-      />
+      <div className="py-12 text-center text-sm text-secondary">暂无聊天记录</div>
     )
   }
 

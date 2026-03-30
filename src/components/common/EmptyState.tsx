@@ -1,3 +1,5 @@
+import { Button } from '@/components/ui/Button'
+
 type EmptyStateProps = {
   eyebrow?: string
   title: string
@@ -23,13 +25,9 @@ export function EmptyState({
       <h2 className="text-xl font-semibold text-primary">{title}</h2>
       <p className="mt-2 max-w-md text-sm text-secondary">{description}</p>
       {actionLabel && onAction ? (
-        <button
-          type="button"
-          onClick={onAction}
-          className="mt-5 rounded-md border border-accent bg-accent px-4 py-2 text-sm font-medium text-accent-foreground hover-opacity-90"
-        >
+        <Button className="mt-5" variant="accent" onClick={onAction}>
           {actionLabel}
-        </button>
+        </Button>
       ) : null}
     </div>
   )

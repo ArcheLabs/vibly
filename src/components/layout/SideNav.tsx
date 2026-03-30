@@ -11,9 +11,9 @@ type SideNavProps = {
 
 export function SideNav({ activePage, onSelect }: SideNavProps) {
   return (
-    <nav className="flex w-[78px] shrink-0 flex-col items-center gap-4 border-r border-default bg-panel px-2 py-4 lg:w-[86px]">
-      <div className="flex h-11 w-11 items-center justify-center rounded-md bg-accent text-accent-foreground">
-        <Sparkles className="h-5 w-5" />
+    <nav className="flex h-full w-[76px] shrink-0 flex-col items-center gap-4 border-r border-default bg-panel px-2 py-4">
+      <div className="flex aspect-square h-12 items-center justify-center rounded-full bg-secondary text-secondary">
+        <Sparkles className="h-6 w-6" />
       </div>
       <div className="mt-2 flex flex-1 flex-col gap-2">
         {navItems.map((item) => {
@@ -26,19 +26,19 @@ export function SideNav({ activePage, onSelect }: SideNavProps) {
               type="button"
               onClick={() => onSelect(item.key)}
               className={cn(
-                'group flex w-full flex-col items-center gap-1 rounded-md px-2 py-2 text-[11px] font-medium transition',
+                'group flex w-full items-center justify-center rounded-full px-2 py-2.5 transition',
                 active
-                  ? 'border border-default bg-surface text-primary'
+                  ? 'border border-default bg-muted text-primary'
                   : 'text-muted hover-bg-muted hover-text-primary',
               )}
+              aria-label={item.label}
             >
-              <Icon className={cn('h-4 w-4', active && 'text-accent')} />
-              <span>{item.label}</span>
+              <Icon className={cn('h-5 w-5', active && 'text-accent')} />
             </button>
           )
         })}
       </div>
-      <div className="w-full">
+      <div className="w-full pb-1">
         <ThemeToggle />
       </div>
     </nav>

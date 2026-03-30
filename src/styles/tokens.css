@@ -3,6 +3,7 @@
   --bg-panel: #f7f8fa;
   --bg-surface: #ffffff;
   --bg-muted: #f2f4f7;
+  --bg-secondary: #e5e7eb;
   --text-primary: #111827;
   --text-secondary: #374151;
   --text-muted: #6b7280;
@@ -18,9 +19,10 @@
 
 [data-theme='dark'] {
   --bg-app: #0f172a;
-  --bg-panel: #111827;
-  --bg-surface: #1f2937;
-  --bg-muted: #0b1220;
+  --bg-panel: #0f172a;
+  --bg-surface: #0f172a;
+  --bg-muted: #374151;
+  --bg-secondary: #1f2937;
   --text-primary: #f3f4f6;
   --text-secondary: #d1d5db;
   --text-muted: #9ca3af;

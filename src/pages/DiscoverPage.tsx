@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react'
-import { Compass, PackageSearch } from 'lucide-react'
+import { Boxes, Compass, Flame, PackageSearch } from 'lucide-react'
 import { AgentListItem } from '@/components/agents/AgentListItem'
 import { AgentCard } from '@/components/profile/AgentCard'
 import { EmptyState } from '@/components/common/EmptyState'
-import { SearchBar } from '@/components/common/SearchBar'
 import { ListPanel } from '@/components/layout/ListPanel'
 import { MainPanel } from '@/components/layout/MainPanel'
+import { SearchBar } from '@/components/ui/SearchBar'
+import { Button } from '@/components/ui/Button'
+import { Divider } from '@/components/ui/Divider'
 import { useAppContext } from '@/lib/app-context'
 import { cn } from '@/lib/utils'
 
@@ -38,28 +40,32 @@ export function DiscoverPage() {
   return (
     <>
       <ListPanel
+        headerClassName="p-3"
+        contentClassName="min-h-0 flex-1 overflow-y-auto"
         header={
-          <div className="space-y-4">
+          <div className="space-y-3">
             <SearchBar value={search} onChange={setSearch} placeholder="搜索热门智能体" />
-            <div className="flex gap-2 rounded-full bg-stone-100 p-1">
+            <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setDiscoverSection('featured')}
                 className={cn(
-                  'flex-1 rounded-full px-4 py-2 text-sm font-medium transition',
-                  discoverSection === 'featured' ? 'bg-white text-ink shadow-sm' : 'text-stone-500',
+                  'flex flex-1 items-center justify-center gap-1 rounded-full px-3 py-2 text-sm text-muted transition hover-bg-muted',
+                  discoverSection === 'featured' && 'border border-default bg-surface text-primary',
                 )}
               >
+                <Flame className="h-4 w-4" />
                 热门智能体
               </button>
               <button
                 type="button"
                 onClick={() => setDiscoverSection('plugins')}
                 className={cn(
-                  'flex-1 rounded-full px-4 py-2 text-sm font-medium transition',
-                  discoverSection === 'plugins' ? 'bg-white text-ink shadow-sm' : 'text-stone-500',
+                  'flex flex-1 items-center justify-center gap-1 rounded-full px-3 py-2 text-sm text-muted transition hover-bg-muted',
+                  discoverSection === 'plugins' && 'border border-default bg-surface text-primary',
                 )}
               >
+                <Boxes className="h-4 w-4" />
                 插件市场
               </button>
             </div>
@@ -68,7 +74,7 @@ export function DiscoverPage() {
       >
         {discoverSection === 'featured' ? (
           featured.length > 0 ? (
-            <div className="space-y-3">
+            <div>
               {featured.map((agent) => (
                 <AgentListItem
                   key={agent.id}
@@ -86,13 +92,13 @@ export function DiscoverPage() {
             />
           )
         ) : (
-          <div className="space-y-3">
-            <div className="rounded-[24px] bg-white p-4 shadow-sm">
+          <div className="p-3">
+            <div className="app-subcard p-3">
               <div className="flex items-center gap-3">
-                <PackageSearch className="h-5 w-5 text-coral" />
+                <PackageSearch className="h-5 w-5 text-accent" />
                 <div>
-                  <p className="font-medium text-ink">插件市场</p>
-                  <p className="text-xs text-stone-500">占位分组，当前仅验证信息架构</p>
+                  <p className="text-sm font-medium text-primary">插件市场</p>
+                  <p className="text-xs text-muted">占位分组，当前仅验证信息架构</p>
                 </div>
               </div>
             </div>
@@ -107,19 +113,18 @@ export function DiscoverPage() {
             description="发现页当前重点是找智能体并进入聊天，插件市场先保留明确占位，不提前引入额外基础设施。"
           />
         ) : selectedAgent ? (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 text-sm text-stone-500">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-sm text-muted">
               <Compass className="h-4 w-4" />
               从这里发起聊天后，会自动跳转到聊天页并选中预置会话。
             </div>
+            <Divider variant="full" />
             <AgentCard agent={selectedAgent} onStartChat={() => startChatWithAgent(selectedAgent.id)} />
-            <button
-              type="button"
-              onClick={() => openAgentProfile(selectedAgent.id)}
-              className="rounded-full border border-stone-200 bg-white px-4 py-3 text-sm font-medium text-stone-600"
-            >
+            <div className="flex justify-center">
+              <Button size="sm" variant="outline" onClick={() => openAgentProfile(selectedAgent.id)}>
               打开智能体信息侧板
-            </button>
+              </Button>
+            </div>
           </div>
         ) : (
           <EmptyState

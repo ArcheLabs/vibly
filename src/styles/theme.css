@@ -30,6 +30,10 @@ body {
   background-color: var(--bg-muted);
 }
 
+.bg-secondary {
+  background-color: var(--bg-secondary);
+}
+
 .bg-accent {
   background-color: var(--accent);
 }
@@ -82,6 +86,10 @@ body {
   background-color: var(--bg-muted);
 }
 
+.hover-bg-surface:hover {
+  background-color: var(--bg-surface);
+}
+
 .hover-border-strong:hover {
   border-color: var(--border-strong);
 }
@@ -96,4 +104,34 @@ body {
 
 .focus-border-strong:focus {
   border-color: var(--border-strong);
+}
+
+.app-card {
+  border: 1px solid var(--border-default);
+  background-color: var(--bg-panel);
+}
+
+.app-subcard {
+  border: 1px solid var(--border-default);
+  background-color: var(--bg-surface);
+}
+
+.app-segment {
+  border: 1px solid var(--border-default);
+  background-color: var(--bg-surface);
+  padding: 4px;
+}
+
+.app-segment-btn {
+  color: var(--text-muted);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.app-segment-btn:hover {
+  background-color: var(--bg-muted);
+}
+
+.app-segment-btn.active {
+  background-color: var(--bg-muted);
+  color: var(--text-primary);
 }

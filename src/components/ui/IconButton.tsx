@@ -10,7 +10,7 @@ export function IconButton({ className, active, type = 'button', ...props }: Ico
     <button
       type={type}
       className={cn(
-        'inline-flex h-9 w-9 items-center justify-center rounded-md border border-default bg-surface text-secondary transition hover-bg-muted hover-text-primary disabled:cursor-not-allowed disabled:opacity-60',
+        'inline-flex h-9 w-9 items-center justify-center rounded-full border border-default bg-surface text-secondary transition hover-bg-muted hover-text-primary disabled:cursor-not-allowed disabled:opacity-60',
         active && 'border-accent text-accent',
         className,
       )}

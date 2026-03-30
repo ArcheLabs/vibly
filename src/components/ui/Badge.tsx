@@ -14,7 +14,7 @@ const variantClassMap: Record<NonNullable<BadgeProps['variant']>, string> = {
 
 export function Badge({ label, variant = 'default' }: BadgeProps) {
   return (
-    <span className={cn('inline-flex items-center rounded-sm px-2 py-0.5 text-[11px]', variantClassMap[variant])}>
+    <span className={cn('inline-flex items-center rounded-full px-2.5 py-1 text-[11px]', variantClassMap[variant])}>
       {label}
     </span>
   )

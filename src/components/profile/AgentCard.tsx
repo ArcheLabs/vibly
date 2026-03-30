@@ -1,5 +1,9 @@
-import { Avatar } from '@/components/common/Avatar'
-import { Badge } from '@/components/common/Badge'
+import { Heart, MessageSquareText } from 'lucide-react'
+import { Avatar } from '@/components/ui/Avatar'
+import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
+import { Divider } from '@/components/ui/Divider'
+import { IconButton } from '@/components/ui/IconButton'
 import type { Agent } from '@/types'
 
 type AgentCardProps = {
@@ -9,18 +13,25 @@ type AgentCardProps = {
 
 export function AgentCard({ agent, onStartChat }: AgentCardProps) {
   return (
-    <div className="space-y-5">
-      <div className="rounded-[28px] bg-white p-5 shadow-sm">
+    <div className="space-y-3">
+      <div className="p-1">
         <div className="flex items-center gap-4">
           <Avatar label={agent.name} size="lg" tone="agent" />
           <div className="min-w-0">
-            <h3 className="font-display text-2xl font-semibold text-ink">{agent.name}</h3>
-            <p className="mt-1 text-sm text-stone-500">{agent.ownerName} 的智能体</p>
+            <h3 className="text-2xl font-semibold text-primary">{agent.name}</h3>
+            <p className="mt-1 text-sm text-muted">{agent.ownerName} 的智能体</p>
           </div>
+          <IconButton className="ml-auto" aria-label="收藏">
+            <Heart className="h-4 w-4" />
+          </IconButton>
         </div>
-        <p className="mt-4 text-sm text-stone-600">{agent.bio}</p>
+        <p className="mt-4 text-sm text-secondary">{agent.bio}</p>
+        <Divider variant="full" className="my-4" />
         <div className="mt-4 flex flex-wrap gap-2">
-          <Badge label={agent.status === 'active' ? 'Active' : agent.status === 'paused' ? 'Paused' : 'Draft'} variant={agent.status === 'active' ? 'success' : 'muted'} />
+          <Badge
+            label={agent.status === 'active' ? 'Active' : agent.status === 'paused' ? 'Paused' : 'Draft'}
+            variant={agent.status === 'active' ? 'accent' : 'muted'}
+          />
           <Badge label={agent.priceHint ?? agent.pricingMode} variant="warning" />
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
@@ -28,25 +39,17 @@ export function AgentCard({ agent, onStartChat }: AgentCardProps) {
             <Badge key={tag} label={tag} variant="default" />
           ))}
         </div>
-        <div className="mt-5 flex gap-3">
-          <button
-            type="button"
-            onClick={onStartChat}
-            className="flex-1 rounded-full bg-ink px-4 py-3 text-sm font-medium text-white transition hover:bg-stone-800"
-          >
+        <div className="mt-5 flex justify-start">
+          <Button variant="accent" onClick={onStartChat}>
+            <MessageSquareText className="h-4 w-4" />
             发起聊天
-          </button>
-          <button
-            type="button"
-            className="rounded-full border border-stone-200 bg-white px-4 py-3 text-sm font-medium text-stone-600"
-          >
-            收藏
-          </button>
+          </Button>
         </div>
       </div>
-      <div className="rounded-[28px] bg-white p-5 shadow-sm">
-        <h4 className="font-semibold text-ink">预览状态</h4>
-        <p className="mt-3 text-sm text-stone-600">
+      <Divider variant="full" />
+      <div className="p-1">
+        <h4 className="font-semibold text-primary">预览状态</h4>
+        <p className="mt-2 text-sm text-secondary">
           当前仅演示公开资料、定价标签和发起聊天路径，不接入真实收藏、举报或链上注册流程。
         </p>
       </div>

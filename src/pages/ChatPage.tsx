@@ -6,28 +6,15 @@ import { Composer } from '@/components/chat/Composer'
 import { ConversationList } from '@/components/chat/ConversationList'
 import { MessageList } from '@/components/chat/MessageList'
 import { EmptyState } from '@/components/common/EmptyState'
+import { useLayoutOverlay } from '@/components/layout/LayoutOverlayContext'
 import { ListPanel } from '@/components/layout/ListPanel'
 import { MainPanel } from '@/components/layout/MainPanel'
-import { Button } from '@/components/ui/Button'
-import { Dropdown } from '@/components/ui/Dropdown'
+import { Divider } from '@/components/ui/Divider'
 import { IconButton } from '@/components/ui/IconButton'
 import { SearchBar } from '@/components/ui/SearchBar'
-import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { useAppContext } from '@/lib/app-context'
-import { cn } from '@/lib/utils'
-import type { Conversation } from '@/types'
-
-type ChatFilter = 'all' | Conversation['state']
 
 type HeaderTarget = 'human' | 'agent'
-
-const chatFilterLabels: Array<{ key: ChatFilter; label: string }> = [
-  { key: 'all', label: '全部' },
-  { key: 'normal', label: '正常' },
-  { key: 'empty', label: '无消息' },
-  { key: 'restricted', label: '受限' },
-  { key: 'paused', label: '停用' },
-]
 
 export function ChatPage() {
   const navigate = useNavigate()
@@ -43,21 +30,12 @@ export function ChatPage() {
     openAgentProfile,
     openUserProfile,
   } = useAppContext()
+  const { closePanel } = useLayoutOverlay()
 
   const [search, setSearch] = useState('')
   const [draft, setDraft] = useState('')
-  const [filter, setFilter] = useState<ChatFilter>('all')
-  const [filterOpen, setFilterOpen] = useState(false)
-  const [listOpen, setListOpen] = useState(false)
   const [targetMenuOpen, setTargetMenuOpen] = useState(false)
   const [targetView, setTargetView] = useState<HeaderTarget>('human')
-  const isDesktop = useMediaQuery('(min-width: 1024px)')
-
-  useEffect(() => {
-    if (isDesktop) {
-      setListOpen(false)
-    }
-  }, [isDesktop])
 
   const filteredConversations = useMemo(
     () =>
@@ -67,10 +45,9 @@ export function ChatPage() {
           `${conversation.title} ${conversation.humanName} ${conversation.agentName ?? ''}`
             .toLowerCase()
             .includes(search.toLowerCase())
-        const matchesFilter = filter === 'all' || conversation.state === filter
-        return matchesSearch && matchesFilter
+        return matchesSearch
       }),
-    [conversations, filter, search],
+    [conversations, search],
   )
 
   const selectedConversation =
@@ -103,30 +80,12 @@ export function ChatPage() {
         : '当前为本地 mock 消息发送'
 
   const listHeader = (
-    <SearchBar
-      value={search}
-      onChange={setSearch}
-      placeholder="搜索会话 / 用户 / 智能体"
-      rightSlot={
-        <>
-          <IconButton aria-label="新建会话">
-            <Plus className="h-4 w-4" />
-          </IconButton>
-          <Dropdown
-            label={`筛选: ${chatFilterLabels.find((item) => item.key === filter)?.label ?? '全部'}`}
-            className="shrink-0"
-            open={filterOpen}
-            onOpenChange={setFilterOpen}
-            options={chatFilterLabels.map((item) => ({
-              key: item.key,
-              label: item.label,
-              active: filter === item.key,
-              onSelect: () => setFilter(item.key),
-            }))}
-          />
-        </>
-      }
-    />
+    <div className="flex items-center gap-2">
+      <SearchBar value={search} onChange={setSearch} placeholder="搜索会话 / 用户 / 智能体" />
+      <IconButton aria-label="新建会话">
+        <Plus className="h-4 w-4" />
+      </IconButton>
+    </div>
   )
 
   const listContent = filteredConversations.length > 0 ? (
@@ -135,7 +94,7 @@ export function ChatPage() {
       activeId={selectedConversationId}
       onSelect={(conversationId) => {
         selectConversation(conversationId)
-        setListOpen(false)
+        closePanel()
       }}
     />
   ) : (
@@ -151,7 +110,6 @@ export function ChatPage() {
   return (
     <>
       <ListPanel
-        className="hidden lg:flex"
         headerClassName="p-3"
         contentClassName="min-h-0 flex-1 overflow-y-auto"
         header={listHeader}
@@ -159,38 +117,9 @@ export function ChatPage() {
         {listContent}
       </ListPanel>
 
-      <div
-        className={cn(
-          'fixed inset-y-0 left-[78px] z-40 w-[min(320px,calc(100vw-78px))] border-r border-default bg-panel transition-transform lg:hidden',
-          listOpen ? 'translate-x-0' : '-translate-x-full',
-        )}
-      >
-        <ListPanel
-          className="h-full w-full border-r-0"
-          headerClassName="p-3"
-          contentClassName="min-h-0 flex-1 overflow-y-auto"
-          header={listHeader}
-        >
-          {listContent}
-        </ListPanel>
-      </div>
-      {listOpen ? (
-        <button
-          type="button"
-          onClick={() => setListOpen(false)}
-          className="fixed inset-0 z-30 bg-black/20 lg:hidden"
-          aria-label="关闭会话列表"
-        />
-      ) : null}
-
-      <MainPanel>
+      <MainPanel className="p-0">
         {!selectedConversation ? (
           <div className="flex h-full flex-col gap-3">
-            <div className="lg:hidden">
-              <Button variant="outline" onClick={() => setListOpen(true)}>
-                打开会话列表
-              </Button>
-            </div>
             <EmptyState
               eyebrow="Chat Empty"
               title="选择一个会话开始预览"
@@ -200,7 +129,7 @@ export function ChatPage() {
             />
           </div>
         ) : (
-          <div className="flex h-full min-h-[640px] flex-col border border-default bg-surface">
+          <div className="flex h-full min-h-[640px] flex-col bg-surface">
             <ChatHeader
               conversation={selectedConversation}
               targetView={targetView}
@@ -217,9 +146,8 @@ export function ChatPage() {
                 }
                 openUserProfile(selectedConversation.humanId)
               }}
-              onToggleList={() => setListOpen(true)}
-              onClearSelection={() => selectConversation(null)}
             />
+            <Divider variant="full" />
 
             <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 lg:px-4 lg:py-4">
               {selectedConversation.state === 'restricted' ? (
@@ -230,6 +158,7 @@ export function ChatPage() {
               <MessageList conversation={selectedConversation} messages={selectedMessages} />
             </div>
 
+            <Divider variant="full" />
             <Composer
               value={draft}
               onChange={setDraft}

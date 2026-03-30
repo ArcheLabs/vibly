@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
-import { Send } from 'lucide-react'
+import { ChevronDown, Send } from 'lucide-react'
+import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
-import { Dropdown } from '@/components/ui/Dropdown'
+import { cn } from '@/lib/utils'
 import type { Identity } from '@/types'
 
 type ComposerProps = {
@@ -26,27 +27,53 @@ export function Composer({
   hint,
 }: ComposerProps) {
   const [identityOpen, setIdentityOpen] = useState(false)
-
   const currentIdentity = useMemo(
     () => identities.find((identity) => identity.id === currentIdentityId) ?? identities[0],
     [currentIdentityId, identities],
   )
 
   return (
-    <div className="border-t border-default px-3 py-3 lg:px-4">
-      <div className="flex items-center justify-between gap-2">
-        <Dropdown
-          label={`当前身份: ${currentIdentity?.name ?? '未知'}`}
-          open={identityOpen}
-          onOpenChange={setIdentityOpen}
-          options={identities.map((identity) => ({
-            key: identity.id,
-            label: `${identity.kind === 'human' ? '真人' : '智能体'} · ${identity.name}`,
-            active: identity.id === currentIdentityId,
-            onSelect: () => onSwitchIdentity(identity.id),
-          }))}
-        />
+    <div className="px-3 py-3 lg:px-4">
+      <div className="relative flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={() => setIdentityOpen(!identityOpen)}
+          className="inline-flex items-center gap-2 text-sm text-secondary hover-text-primary"
+        >
+          <Avatar
+            label={currentIdentity?.name ?? '未知'}
+            size="sm"
+            tone={currentIdentity?.kind === 'agent' ? 'agent' : 'human'}
+          />
+          <span>{currentIdentity?.name ?? '未知'}</span>
+          <ChevronDown className="h-4 w-4" />
+        </button>
         <span className="text-xs text-muted">{hint}</span>
+        {identityOpen ? (
+          <div className="absolute left-0 top-[calc(100%+8px)] z-30 min-w-[220px] rounded-2xl border border-default bg-surface p-1.5">
+            {identities.map((identity) => (
+              <button
+                key={identity.id}
+                type="button"
+                onClick={() => {
+                  onSwitchIdentity(identity.id)
+                  setIdentityOpen(false)
+                }}
+                className={cn(
+                  'flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm',
+                  identity.id === currentIdentityId ? 'bg-muted text-primary' : 'text-secondary hover-bg-muted',
+                )}
+              >
+                <Avatar
+                  label={identity.name}
+                  size="sm"
+                  tone={identity.kind === 'agent' ? 'agent' : 'human'}
+                />
+                <span>{identity.name}</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
       <div className="mt-2 flex items-end gap-2">
         <textarea
@@ -55,7 +82,7 @@ export function Composer({
           placeholder="输入消息"
           disabled={disabled}
           rows={3}
-          className="min-h-[84px] w-full resize-none rounded-md border border-default bg-surface px-3 py-2 text-sm text-primary outline-none placeholder:text-muted disabled:cursor-not-allowed"
+          className="min-h-[84px] w-full resize-none rounded-2xl border-0 bg-transparent px-1 py-2 text-sm text-primary outline-none placeholder:text-muted disabled:cursor-not-allowed"
         />
         <Button
           variant={value.trim().length > 0 && !disabled ? 'accent' : 'muted'}

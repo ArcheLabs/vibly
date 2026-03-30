@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import { ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 type SidebarItemProps = {
@@ -42,9 +41,7 @@ export function SidebarItem({
         <span className="rounded-sm border border-accent bg-accent px-1.5 py-0.5 text-[11px] text-accent-foreground">
           {unreadCount}
         </span>
-      ) : (
-        <ChevronRight className="h-4 w-4 text-muted" />
-      )}
+      ) : null}
     </button>
   )
 }

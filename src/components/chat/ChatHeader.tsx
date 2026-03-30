@@ -1,8 +1,8 @@
-import { PanelLeftOpen, X } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
-import { Dropdown } from '@/components/ui/Dropdown'
 import { IconButton } from '@/components/ui/IconButton'
+import { cn } from '@/lib/utils'
 import type { Conversation } from '@/types'
 
 type HeaderTarget = 'human' | 'agent'
@@ -14,8 +14,6 @@ type ChatHeaderProps = {
   onTargetMenuOpenChange: (open: boolean) => void
   onTargetViewChange: (target: HeaderTarget) => void
   onOpenTargetProfile: () => void
-  onToggleList: () => void
-  onClearSelection: () => void
 }
 
 export function ChatHeader({
@@ -25,8 +23,6 @@ export function ChatHeader({
   onTargetMenuOpenChange,
   onTargetViewChange,
   onOpenTargetProfile,
-  onToggleList,
-  onClearSelection,
 }: ChatHeaderProps) {
   const isViewingAgent = targetView === 'agent'
   const title = isViewingAgent ? conversation.agentName : conversation.humanName
@@ -34,11 +30,8 @@ export function ChatHeader({
   const hasAgentTarget = conversation.targetType === 'agent' && Boolean(conversation.agentName)
 
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-default px-3 py-3 lg:px-4">
+    <div className="relative flex items-center justify-between gap-3 px-3 py-3 lg:px-4">
       <div className="flex min-w-0 items-center gap-3">
-        <IconButton className="lg:hidden" onClick={onToggleList} aria-label="打开会话列表">
-          <PanelLeftOpen className="h-4 w-4" />
-        </IconButton>
         <Avatar
           label={title ?? conversation.humanName}
           tone={isViewingAgent ? 'agent' : 'human'}
@@ -53,33 +46,38 @@ export function ChatHeader({
           <p className="truncate text-xs text-muted">{description}</p>
         </div>
       </div>
-      <div className="flex items-center gap-2">
-        <Dropdown
-          label={isViewingAgent ? '对方对象: 智能体' : '对方对象: 联系人'}
-          open={targetMenuOpen}
-          onOpenChange={onTargetMenuOpenChange}
-          options={[
-            {
-              key: 'human',
-              label: `联系人: ${conversation.humanName}`,
-              active: targetView === 'human',
-              onSelect: () => onTargetViewChange('human'),
-            },
-            ...(hasAgentTarget
-              ? [
-                  {
-                    key: 'agent',
-                    label: `智能体: ${conversation.agentName}`,
-                    active: targetView === 'agent',
-                    onSelect: () => onTargetViewChange('agent'),
-                  },
-                ]
-              : []),
-          ]}
-        />
-        <IconButton onClick={onClearSelection} aria-label="清空选中会话">
-          <X className="h-4 w-4" />
+      <div className="relative">
+        <IconButton onClick={() => onTargetMenuOpenChange(!targetMenuOpen)} aria-label="切换对方对象">
+          <ChevronDown className="h-4 w-4" />
         </IconButton>
+        {targetMenuOpen ? (
+          <div className="absolute right-0 top-[calc(100%+8px)] z-20 min-w-[164px] rounded-2xl border border-default bg-surface p-1.5">
+            <button
+              type="button"
+              onClick={() => onTargetViewChange('human')}
+              className={cn(
+                'flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm',
+                targetView === 'human' ? 'bg-muted text-primary' : 'text-secondary hover-bg-muted',
+              )}
+            >
+              <Avatar label={conversation.humanName} size="sm" tone="human" />
+              <span className="truncate">{conversation.humanName}</span>
+            </button>
+            {hasAgentTarget ? (
+              <button
+                type="button"
+                onClick={() => onTargetViewChange('agent')}
+                className={cn(
+                  'mt-1 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm',
+                  targetView === 'agent' ? 'bg-muted text-primary' : 'text-secondary hover-bg-muted',
+                )}
+              >
+                <Avatar label={conversation.agentName ?? '智能体'} size="sm" tone="agent" />
+                <span className="truncate">{conversation.agentName}</span>
+              </button>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </div>
   )

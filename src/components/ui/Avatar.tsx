@@ -15,9 +15,15 @@ const sizeClassMap = {
 }
 
 const toneClassMap = {
-  human: 'text-[var(--avatar-human-fg)] bg-[var(--avatar-human-bg)]',
-  agent: 'text-[var(--avatar-agent-fg)] bg-[var(--avatar-agent-bg)]',
-  neutral: 'bg-muted text-secondary',
+  human: 'text-[var(--avatar-human-fg)] bg-[var(--avatar-human-bg)] border border-strong',
+  agent: 'text-[var(--avatar-agent-fg)] bg-[var(--avatar-agent-bg)] border border-default',
+  neutral: 'bg-muted text-secondary border border-default',
+}
+
+const shapeClassMap = {
+  human: 'rounded-md',
+  agent: 'rounded-full',
+  neutral: 'rounded-full',
 }
 
 export function Avatar({ label, size = 'md', tone = 'neutral', onClick }: AvatarProps) {
@@ -34,9 +40,10 @@ export function Avatar({ label, size = 'md', tone = 'neutral', onClick }: Avatar
         type="button"
         onClick={onClick}
         className={cn(
-          'inline-flex shrink-0 items-center justify-center rounded-md font-semibold transition hover:opacity-90',
+          'inline-flex shrink-0 items-center justify-center font-semibold transition hover:opacity-90',
           sizeClassMap[size],
           toneClassMap[tone],
+          shapeClassMap[tone],
         )}
       >
         {initials || <UserRound className="h-3.5 w-3.5" />}
@@ -47,9 +54,10 @@ export function Avatar({ label, size = 'md', tone = 'neutral', onClick }: Avatar
   return (
     <div
       className={cn(
-        'inline-flex shrink-0 items-center justify-center rounded-md font-semibold',
+        'inline-flex shrink-0 items-center justify-center font-semibold',
         sizeClassMap[size],
         toneClassMap[tone],
+        shapeClassMap[tone],
       )}
     >
       {initials || <UserRound className="h-3.5 w-3.5" />}

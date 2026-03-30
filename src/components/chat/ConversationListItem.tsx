@@ -9,10 +9,13 @@ type ConversationListItemProps = {
 }
 
 export function ConversationListItem({ item, active, onClick }: ConversationListItemProps) {
+  const title = item.agentName ?? item.humanName
+  const subtitle = item.agentName ? item.humanName : item.subtitle
+
   return (
     <SidebarItem
-      title={item.title}
-      subtitle={item.subtitle}
+      title={title}
+      subtitle={subtitle}
       time={item.updatedAt}
       active={active}
       unreadCount={item.unreadCount}

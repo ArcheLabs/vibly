@@ -1,19 +1,25 @@
 import { useMemo } from 'react'
+import { TrendingDown, TrendingUp, Wallet } from 'lucide-react'
 import { EmptyState } from '@/components/common/EmptyState'
 import { ListPanel } from '@/components/layout/ListPanel'
 import { MainPanel } from '@/components/layout/MainPanel'
-import { WalletRecordItem } from '@/components/wallet/WalletRecordItem'
+import { PanelTitle } from '@/components/layout/PanelTitle'
+import { Divider } from '@/components/ui/Divider'
 import { WalletSummary } from '@/components/wallet/WalletSummary'
 import { useAppContext } from '@/lib/app-context'
 import { cn } from '@/lib/utils'
+
+const walletTabs = [
+  { key: 'overview', label: '资产', icon: Wallet },
+  { key: 'income', label: '收入', icon: TrendingUp },
+  { key: 'expense', label: '支出', icon: TrendingDown },
+] as const
 
 export function WalletPage() {
   const {
     walletSection,
     setWalletSection,
     walletRecords,
-    selectedWalletRecordId,
-    setSelectedWalletRecordId,
     walletSummary,
   } = useAppContext()
 
@@ -25,77 +31,78 @@ export function WalletPage() {
     [walletRecords, walletSection],
   )
 
-  const selectedRecord =
-    visibleRecords.find((record) => record.id === selectedWalletRecordId) ?? visibleRecords[0] ?? null
+  const selectedRecord = visibleRecords[0] ?? null
 
   return (
     <>
       <ListPanel
-        header={
-          <div className="space-y-4">
-            <div className="flex gap-2 rounded-full bg-stone-100 p-1">
-              {[
-                { key: 'overview', label: '资产总览' },
-                { key: 'income', label: '收入' },
-                { key: 'expense', label: '支出' },
-              ].map((item) => (
-                <button
-                  key={item.key}
-                  type="button"
-                  onClick={() => setWalletSection(item.key as typeof walletSection)}
-                  className={cn(
-                    'flex-1 rounded-full px-4 py-2 text-sm font-medium transition',
-                    walletSection === item.key ? 'bg-white text-ink shadow-sm' : 'text-stone-500',
-                  )}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        }
+        headerClassName="p-3"
+        contentClassName="min-h-0 flex-1 overflow-y-auto"
+        header={<PanelTitle icon={Wallet} title="Wallet" />}
       >
-        {visibleRecords.length > 0 ? (
-          <div className="space-y-3">
-            {visibleRecords.map((record) => (
-              <WalletRecordItem
-                key={record.id}
-                record={record}
-                active={record.id === selectedRecord?.id}
-                onClick={() => setSelectedWalletRecordId(record.id)}
-              />
-            ))}
-          </div>
-        ) : (
-          <EmptyState
-            eyebrow="Wallet Empty"
-            title="当前筛选下无记录"
-            description="钱包页也保留空状态，后续接链上数据时不用再改布局。"
-          />
-        )}
+        <div>
+          {walletTabs.map((item) => {
+            const Icon = item.icon
+            return (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => setWalletSection(item.key)}
+                className={cn(
+                  'flex w-full items-center gap-2 border-b border-default px-3 py-3 text-sm transition',
+                  walletSection === item.key ? 'bg-muted text-primary' : 'text-muted hover-bg-muted',
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                <span>{item.label}</span>
+              </button>
+            )
+          })}
+        </div>
       </ListPanel>
+
       <MainPanel>
         <div className="space-y-4">
-          <WalletSummary summary={walletSummary} />
+          {walletSection === 'overview' ? <WalletSummary summary={walletSummary} /> : null}
+
+          {walletSection === 'income' ? (
+            <div className="p-3">
+              <h3 className="text-lg font-semibold text-primary">收入明细</h3>
+              <p className="mt-2 text-sm text-secondary">共 {visibleRecords.length} 条收入记录。</p>
+            </div>
+          ) : null}
+
+          {walletSection === 'expense' ? (
+            <div className="p-3">
+              <h3 className="text-lg font-semibold text-primary">支出明细</h3>
+              <p className="mt-2 text-sm text-secondary">共 {visibleRecords.length} 条支出记录。</p>
+            </div>
+          ) : null}
+
+          <Divider variant="full" />
+
           {selectedRecord ? (
-            <div className="glass rounded-[32px] border border-white/70 p-6 shadow-panel">
-              <h3 className="font-display text-2xl font-semibold text-ink">{selectedRecord.title}</h3>
-              <div className="mt-4 grid gap-4 md:grid-cols-2">
-                <div className="rounded-[24px] bg-white p-4">
-                  <p className="text-xs uppercase tracking-[0.18em] text-stone-400">Amount</p>
-                  <p className="mt-2 text-2xl font-semibold text-ink">{selectedRecord.amount}</p>
+            <div className="p-3">
+              <h3 className="text-xl font-semibold text-primary">{selectedRecord.title}</h3>
+              <Divider variant="full" className="my-3" />
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="app-subcard p-3">
+                  <p className="text-xs uppercase tracking-[0.12em] text-muted">Amount</p>
+                  <p className="mt-1 text-xl font-semibold text-primary">{selectedRecord.amount}</p>
                 </div>
-                <div className="rounded-[24px] bg-white p-4">
-                  <p className="text-xs uppercase tracking-[0.18em] text-stone-400">Time</p>
-                  <p className="mt-2 text-2xl font-semibold text-ink">{selectedRecord.time}</p>
+                <div className="app-subcard p-3">
+                  <p className="text-xs uppercase tracking-[0.12em] text-muted">Time</p>
+                  <p className="mt-1 text-xl font-semibold text-primary">{selectedRecord.time}</p>
                 </div>
               </div>
-              <div className="mt-4 rounded-[24px] bg-white p-4 text-sm text-stone-600">
+              <div className="app-subcard mt-4 p-3 text-sm text-secondary">
                 <p>{selectedRecord.remark}</p>
                 <p className="mt-2">关联对象：{selectedRecord.relatedTo ?? '暂无'}</p>
               </div>
             </div>
-          ) : null}
+          ) : (
+            <EmptyState eyebrow="Wallet" title="暂无数据" description="右侧会展示当前分类的账单详情。" />
+          )}
         </div>
       </MainPanel>
     </>
