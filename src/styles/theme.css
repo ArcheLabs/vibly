@@ -83,7 +83,7 @@ body {
 }
 
 .hover-bg-muted:hover {
-  background-color: var(--bg-muted);
+  background-color: color-mix(in srgb, var(--bg-muted) 88%, var(--bg-surface));
 }
 
 .hover-bg-surface:hover {
@@ -128,10 +128,10 @@ body {
 }
 
 .app-segment-btn:hover {
-  background-color: var(--bg-muted);
+  background-color: color-mix(in srgb, var(--bg-muted) 88%, var(--bg-surface));
 }
 
 .app-segment-btn.active {
-  background-color: var(--bg-muted);
+  background-color: color-mix(in srgb, var(--bg-muted) 92%, var(--bg-surface));
   color: var(--text-primary);
 }

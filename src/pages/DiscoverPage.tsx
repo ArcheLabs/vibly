@@ -8,10 +8,12 @@ import { MainPanel } from '@/components/layout/MainPanel'
 import { SearchBar } from '@/components/ui/SearchBar'
 import { Button } from '@/components/ui/Button'
 import { Divider } from '@/components/ui/Divider'
+import { useI18n } from '@/i18n'
 import { useAppContext } from '@/lib/app-context'
 import { cn } from '@/lib/utils'
 
 export function DiscoverPage() {
+  const { t } = useI18n()
   const {
     agents,
     featuredAgentIds,
@@ -44,7 +46,7 @@ export function DiscoverPage() {
         contentClassName="min-h-0 flex-1 overflow-y-auto"
         header={
           <div className="space-y-3">
-            <SearchBar value={search} onChange={setSearch} placeholder="搜索热门智能体" />
+            <SearchBar value={search} onChange={setSearch} placeholder={t('discover.searchPlaceholder')} />
             <div className="flex gap-2">
               <button
                 type="button"
@@ -55,7 +57,7 @@ export function DiscoverPage() {
                 )}
               >
                 <Flame className="h-4 w-4" />
-                热门智能体
+                {t('discover.tabFeatured')}
               </button>
               <button
                 type="button"
@@ -66,7 +68,7 @@ export function DiscoverPage() {
                 )}
               >
                 <Boxes className="h-4 w-4" />
-                插件市场
+                {t('discover.tabPlugins')}
               </button>
             </div>
           </div>
@@ -86,9 +88,9 @@ export function DiscoverPage() {
             </div>
           ) : (
             <EmptyState
-              eyebrow="Discover"
-              title="暂无命中结果"
-              description="当前搜索没有匹配的智能体，清空搜索即可回到推荐列表。"
+              eyebrow={t('nav.discover')}
+              title={t('discover.noResultTitle')}
+              description={t('discover.noResultDescription')}
             />
           )
         ) : (
@@ -97,8 +99,8 @@ export function DiscoverPage() {
               <div className="flex items-center gap-3">
                 <PackageSearch className="h-5 w-5 text-accent" />
                 <div>
-                  <p className="text-sm font-medium text-primary">插件市场</p>
-                  <p className="text-xs text-muted">占位分组，当前仅验证信息架构</p>
+                  <p className="text-sm font-medium text-primary">{t('discover.tabPlugins')}</p>
+                  <p className="text-xs text-muted">{t('discover.pluginPlaceholder')}</p>
                 </div>
               </div>
             </div>
@@ -108,29 +110,29 @@ export function DiscoverPage() {
       <MainPanel>
         {discoverSection === 'plugins' ? (
           <EmptyState
-            eyebrow="Plugin Market"
-            title="产品经理正在思考中"
-            description="发现页当前重点是找智能体并进入聊天，插件市场先保留明确占位，不提前引入额外基础设施。"
+            eyebrow={t('discover.tabPlugins')}
+            title={t('discover.pluginTitle')}
+            description={t('discover.pluginDescription')}
           />
         ) : selectedAgent ? (
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-sm text-muted">
               <Compass className="h-4 w-4" />
-              从这里发起聊天后，会自动跳转到聊天页并选中预置会话。
+              {t('discover.intro')}
             </div>
             <Divider variant="full" />
             <AgentCard agent={selectedAgent} onStartChat={() => startChatWithAgent(selectedAgent.id)} />
             <div className="flex justify-center">
               <Button size="sm" variant="outline" onClick={() => openAgentProfile(selectedAgent.id)}>
-              打开智能体信息侧板
+                {t('actions.openAgentProfile')}
               </Button>
             </div>
           </div>
         ) : (
           <EmptyState
-            eyebrow="Discover"
-            title="选择一个智能体"
-            description="右侧将显示该智能体的公开资料和发起聊天按钮。"
+            eyebrow={t('nav.discover')}
+            title={t('discover.pickTitle')}
+            description={t('discover.pickDescription')}
           />
         )}
       </MainPanel>

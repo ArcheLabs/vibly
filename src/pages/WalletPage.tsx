@@ -6,16 +6,20 @@ import { MainPanel } from '@/components/layout/MainPanel'
 import { PanelTitle } from '@/components/layout/PanelTitle'
 import { Divider } from '@/components/ui/Divider'
 import { WalletSummary } from '@/components/wallet/WalletSummary'
+import { useI18n } from '@/i18n'
+import { formatAmountByLocale, formatNumberByLocale, localizeRelativeTimeToken } from '@/i18n/format'
 import { useAppContext } from '@/lib/app-context'
 import { cn } from '@/lib/utils'
+import type { WalletSection } from '@/types'
 
-const walletTabs = [
-  { key: 'overview', label: '资产', icon: Wallet },
-  { key: 'income', label: '收入', icon: TrendingUp },
-  { key: 'expense', label: '支出', icon: TrendingDown },
-] as const
+const walletTabs: Array<{ key: WalletSection; labelKey: string; icon: typeof Wallet }> = [
+  { key: 'overview', labelKey: 'wallet.assets', icon: Wallet },
+  { key: 'income', labelKey: 'wallet.income', icon: TrendingUp },
+  { key: 'expense', labelKey: 'wallet.expense', icon: TrendingDown },
+]
 
 export function WalletPage() {
+  const { locale, t } = useI18n()
   const {
     walletSection,
     setWalletSection,
@@ -38,7 +42,7 @@ export function WalletPage() {
       <ListPanel
         headerClassName="p-3"
         contentClassName="min-h-0 flex-1 overflow-y-auto"
-        header={<PanelTitle icon={Wallet} title="Wallet" />}
+        header={<PanelTitle icon={Wallet} title={t('panelTitle.wallet')} />}
       >
         <div>
           {walletTabs.map((item) => {
@@ -54,7 +58,7 @@ export function WalletPage() {
                 )}
               >
                 <Icon className="h-4 w-4" />
-                <span>{item.label}</span>
+                <span>{t(item.labelKey)}</span>
               </button>
             )
           })}
@@ -67,15 +71,19 @@ export function WalletPage() {
 
           {walletSection === 'income' ? (
             <div className="p-3">
-              <h3 className="text-lg font-semibold text-primary">收入明细</h3>
-              <p className="mt-2 text-sm text-secondary">共 {visibleRecords.length} 条收入记录。</p>
+              <h3 className="text-lg font-semibold text-primary">{t('wallet.incomeTitle')}</h3>
+              <p className="mt-2 text-sm text-secondary">
+                {t('wallet.incomeCount', { count: formatNumberByLocale(visibleRecords.length, locale) })}
+              </p>
             </div>
           ) : null}
 
           {walletSection === 'expense' ? (
             <div className="p-3">
-              <h3 className="text-lg font-semibold text-primary">支出明细</h3>
-              <p className="mt-2 text-sm text-secondary">共 {visibleRecords.length} 条支出记录。</p>
+              <h3 className="text-lg font-semibold text-primary">{t('wallet.expenseTitle')}</h3>
+              <p className="mt-2 text-sm text-secondary">
+                {t('wallet.expenseCount', { count: formatNumberByLocale(visibleRecords.length, locale) })}
+              </p>
             </div>
           ) : null}
 
@@ -87,21 +95,25 @@ export function WalletPage() {
               <Divider variant="full" className="my-3" />
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="app-subcard p-3">
-                  <p className="text-xs uppercase tracking-[0.12em] text-muted">Amount</p>
-                  <p className="mt-1 text-xl font-semibold text-primary">{selectedRecord.amount}</p>
+                  <p className="text-xs uppercase tracking-[0.12em] text-muted">{t('common.amount')}</p>
+                  <p className="mt-1 text-xl font-semibold text-primary">
+                    {formatAmountByLocale(selectedRecord.amount, locale)}
+                  </p>
                 </div>
                 <div className="app-subcard p-3">
-                  <p className="text-xs uppercase tracking-[0.12em] text-muted">Time</p>
-                  <p className="mt-1 text-xl font-semibold text-primary">{selectedRecord.time}</p>
+                  <p className="text-xs uppercase tracking-[0.12em] text-muted">{t('common.time')}</p>
+                  <p className="mt-1 text-xl font-semibold text-primary">
+                    {localizeRelativeTimeToken(selectedRecord.time, locale)}
+                  </p>
                 </div>
               </div>
               <div className="app-subcard mt-4 p-3 text-sm text-secondary">
                 <p>{selectedRecord.remark}</p>
-                <p className="mt-2">关联对象：{selectedRecord.relatedTo ?? '暂无'}</p>
+                <p className="mt-2">{t('common.relatedTo', { value: selectedRecord.relatedTo ?? t('common.none') })}</p>
               </div>
             </div>
           ) : (
-            <EmptyState eyebrow="Wallet" title="暂无数据" description="右侧会展示当前分类的账单详情。" />
+            <EmptyState eyebrow={t('panelTitle.wallet')} title={t('wallet.emptyTitle')} description={t('wallet.emptyDescription')} />
           )}
         </div>
       </MainPanel>

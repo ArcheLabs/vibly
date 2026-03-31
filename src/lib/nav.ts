@@ -11,15 +11,15 @@ import type { AppPage } from '@/types'
 
 export type NavItem = {
   key: AppPage
-  label: string
+  labelKey: string
   icon: LucideIcon
 }
 
 export const navItems: NavItem[] = [
-  { key: 'chat', label: '聊天', icon: MessageCircle },
-  { key: 'agents', label: '智能体', icon: Bot },
-  { key: 'discover', label: '发现', icon: Compass },
-  { key: 'contacts', label: '联系人', icon: Users },
-  { key: 'wallet', label: '钱包', icon: Wallet },
-  { key: 'me', label: '我的', icon: UserRound },
+  { key: 'chat', labelKey: 'nav.chat', icon: MessageCircle },
+  { key: 'agents', labelKey: 'nav.agents', icon: Bot },
+  { key: 'discover', labelKey: 'nav.discover', icon: Compass },
+  { key: 'contacts', labelKey: 'nav.contacts', icon: Users },
+  { key: 'wallet', labelKey: 'nav.wallet', icon: Wallet },
+  { key: 'me', labelKey: 'nav.me', icon: UserRound },
 ]

@@ -9,10 +9,12 @@ import { Button } from '@/components/ui/Button'
 import { Divider } from '@/components/ui/Divider'
 import { IconButton } from '@/components/ui/IconButton'
 import { SearchBar } from '@/components/ui/SearchBar'
+import { useI18n } from '@/i18n'
 import { useAppContext } from '@/lib/app-context'
 import { cn } from '@/lib/utils'
 
 export function ContactsPage() {
+  const { t } = useI18n()
   const {
     contacts,
     contactRequests,
@@ -56,8 +58,8 @@ export function ContactsPage() {
         header={
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <SearchBar value={search} onChange={setSearch} placeholder="搜索联系人或申请" />
-              <IconButton aria-label="添加联系人">
+              <SearchBar value={search} onChange={setSearch} placeholder={t('contacts.searchPlaceholder')} />
+              <IconButton aria-label={t('actions.addContact')}>
                 <UserPlus className="h-4 w-4" />
               </IconButton>
             </div>
@@ -71,7 +73,7 @@ export function ContactsPage() {
                 )}
               >
                 <Users className="h-4 w-4" />
-                联系人
+                {t('contacts.tabContacts')}
               </button>
               <button
                 type="button"
@@ -82,7 +84,7 @@ export function ContactsPage() {
                 )}
               >
                 <UserRoundCheck className="h-4 w-4" />
-                申请
+                {t('contacts.tabRequests')}
               </button>
             </div>
           </div>
@@ -102,9 +104,9 @@ export function ContactsPage() {
             </div>
           ) : (
             <EmptyState
-              eyebrow="Contacts"
-              title="暂无联系人"
-              description="联系人页保留空状态，后续可以直接接真实关系链路。"
+              eyebrow={t('contacts.tabContacts')}
+              title={t('contacts.noContactsTitle')}
+              description={t('contacts.noContactsDescription')}
             />
           )
         ) : filteredRequests.length > 0 ? (
@@ -120,9 +122,9 @@ export function ContactsPage() {
           </div>
         ) : (
           <EmptyState
-            eyebrow="Requests"
-            title="暂无待处理申请"
-            description="申请列表也保留空状态，便于后续替换成正式实现。"
+            eyebrow={t('contacts.tabRequests')}
+            title={t('contacts.noRequestsTitle')}
+            description={t('contacts.noRequestsDescription')}
           />
         )}
       </ListPanel>
@@ -139,14 +141,14 @@ export function ContactsPage() {
                 <h2 className="text-2xl font-semibold text-primary">{selectedContact.name}</h2>
                 <p className="mt-1.5 text-sm text-secondary">
                   {selectedContact.kind === 'agent'
-                    ? `${selectedContact.ownerName} 的智能体`
+                    ? t('common.ownerAgent', { name: selectedContact.ownerName ?? '' })
                     : selectedContact.bio}
                 </p>
               </div>
             </div>
             <Divider variant="full" className="my-4" />
             <p className="mt-4 max-w-2xl text-sm text-secondary">
-              联系人页承担“查看关系对象并进入聊天”的入口职责。当前按钮全部使用本地状态，不触发真实联系人操作。
+              {t('contacts.intro')}
             </p>
             <div className="mt-5 flex flex-wrap gap-3">
               <Button
@@ -158,7 +160,7 @@ export function ContactsPage() {
                 variant="accent"
               >
                 <MessageSquareText className="h-4 w-4" />
-                发消息
+                {t('actions.message')}
               </Button>
             </div>
           </div>
@@ -181,22 +183,22 @@ export function ContactsPage() {
                 variant="accent"
               >
                 <Check className="h-4 w-4" />
-                接受
+                {t('actions.accept')}
               </Button>
               <Button
                 onClick={() => updateRequestStatus(selectedRequest.id, 'rejected')}
                 variant="outline"
               >
                 <X className="h-4 w-4" />
-                拒绝
+                {t('actions.reject')}
               </Button>
             </div>
           </div>
         ) : (
           <EmptyState
-            eyebrow="Contacts"
-            title="选择一个对象查看详情"
-            description="联系人与申请都保持列表 + 详情结构，方便切换和演示。"
+            eyebrow={t('contacts.tabContacts')}
+            title={t('contacts.pickTitle')}
+            description={t('contacts.pickDescription')}
           />
         )}
       </MainPanel>

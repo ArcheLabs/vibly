@@ -15,7 +15,9 @@ import {
   walletRecords,
   walletSummary,
 } from '@/mock'
-import { formatNowTime, makeId } from '@/lib/utils'
+import { makeId } from '@/lib/utils'
+import { useI18n } from '@/i18n'
+import { formatTimeByLocale } from '@/i18n/format'
 import type {
   Contact,
   AppPage,
@@ -44,6 +46,7 @@ function moveConversationToFront(items: Conversation[], conversationId: string) 
 }
 
 export default function App() {
+  const { locale, t } = useI18n()
   const location = useLocation()
   const navigate = useNavigate()
   const [conversations, setConversations] = useState(initialConversations)
@@ -109,8 +112,8 @@ export default function App() {
       humanId: owner.id,
       humanName: owner.name,
       title: `${owner.name} / ${agent.name}`,
-      subtitle: '还没有开始聊天',
-      updatedAt: '刚刚',
+      subtitle: t('chat.noMessages'),
+      updatedAt: formatTimeByLocale(new Date(), locale),
       unreadCount: 0,
       state: 'empty',
       agentId: agent.id,
@@ -145,8 +148,8 @@ export default function App() {
       humanId: user.id,
       humanName: user.name,
       title: user.name,
-      subtitle: '还没有开始聊天',
-      updatedAt: '刚刚',
+      subtitle: t('chat.noMessages'),
+      updatedAt: formatTimeByLocale(new Date(), locale),
       unreadCount: 0,
       state: 'empty',
     }
@@ -173,8 +176,8 @@ export default function App() {
           id: makeId('m_system'),
           conversationId,
           type: 'system',
-          text: `你已切换为 “${identity.name}” 身份。`,
-          time: formatNowTime(),
+          text: t('chat.systemIdentitySwitched', { value: identity.name }),
+          time: formatTimeByLocale(new Date(), locale),
         },
       ],
     }))
@@ -184,8 +187,8 @@ export default function App() {
           conversation.id === conversationId
             ? {
                 ...conversation,
-                subtitle: `已切换为 ${identity.name}`,
-                updatedAt: formatNowTime(),
+                subtitle: t('chat.systemIdentitySwitched', { value: identity.name }),
+                updatedAt: formatTimeByLocale(new Date(), locale),
               }
             : conversation,
         ),
@@ -200,7 +203,7 @@ export default function App() {
 
     const identityId = conversationIdentityMap[conversationId] ?? currentUser.defaultIdentityId
     const identity = identities.find((item) => item.id === identityId)
-    const sentAt = formatNowTime()
+    const sentAt = formatTimeByLocale(new Date(), locale)
 
     setConversationMessages((items) => ({
       ...items,

@@ -1,5 +1,7 @@
 import { SidebarItem } from '@/components/ui/SidebarItem'
 import { Avatar } from '@/components/ui/Avatar'
+import { useI18n } from '@/i18n'
+import { localizeRelativeTimeToken } from '@/i18n/format'
 import type { Conversation } from '@/types'
 
 type ConversationListItemProps = {
@@ -9,6 +11,7 @@ type ConversationListItemProps = {
 }
 
 export function ConversationListItem({ item, active, onClick }: ConversationListItemProps) {
+  const { locale } = useI18n()
   const title = item.agentName ?? item.humanName
   const subtitle = item.agentName ? item.humanName : item.subtitle
 
@@ -16,7 +19,7 @@ export function ConversationListItem({ item, active, onClick }: ConversationList
     <SidebarItem
       title={title}
       subtitle={subtitle}
-      time={item.updatedAt}
+      time={localizeRelativeTimeToken(item.updatedAt, locale)}
       active={active}
       unreadCount={item.unreadCount}
       onClick={onClick}

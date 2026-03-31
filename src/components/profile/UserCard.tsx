@@ -2,6 +2,8 @@ import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Divider } from '@/components/ui/Divider'
+import { useI18n } from '@/i18n'
+import { getPricingLabel, getRelationshipLabel } from '@/i18n/labels'
 import type { Agent, User } from '@/types'
 
 type UserCardProps = {
@@ -11,6 +13,8 @@ type UserCardProps = {
 }
 
 export function UserCard({ user, agents, onMessage }: UserCardProps) {
+  const { t } = useI18n()
+
   return (
     <div className="space-y-3">
       <div className="p-3">
@@ -22,16 +26,16 @@ export function UserCard({ user, agents, onMessage }: UserCardProps) {
           </div>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          <Badge label={user.relationship === 'contact' ? '联系人' : user.relationship === 'self' ? '自己' : '公开资料'} variant="default" />
+          <Badge label={getRelationshipLabel(user.relationship, t)} variant="default" />
           <Badge label={user.mainAddress} variant="muted" />
         </div>
         <Button className="mt-5 w-full" variant="accent" onClick={onMessage}>
-          发消息
+          {t('actions.message')}
         </Button>
       </div>
       <Divider variant="full" />
       <div className="p-3">
-        <h4 className="font-semibold text-primary">公开智能体</h4>
+        <h4 className="font-semibold text-primary">{t('profile.publicAgents')}</h4>
         <div className="mt-4 space-y-3">
           {agents.map((agent) => (
             <div key={agent.id} className="rounded-2xl bg-muted p-3">
@@ -40,7 +44,7 @@ export function UserCard({ user, agents, onMessage }: UserCardProps) {
                   <p className="font-medium text-primary">{agent.name}</p>
                   <p className="mt-1 text-xs text-muted">{agent.bio}</p>
                 </div>
-                <Badge label={agent.pricingMode === 'free' ? 'Free' : 'Paid'} variant="accent" />
+                <Badge label={getPricingLabel(agent.pricingMode, t)} variant="accent" />
               </div>
             </div>
           ))}

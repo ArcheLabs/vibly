@@ -2,6 +2,8 @@ import { ChevronDown } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { IconButton } from '@/components/ui/IconButton'
+import { useI18n } from '@/i18n'
+import { getConversationStateLabel } from '@/i18n/labels'
 import { cn } from '@/lib/utils'
 import type { Conversation } from '@/types'
 
@@ -24,9 +26,12 @@ export function ChatHeader({
   onTargetViewChange,
   onOpenTargetProfile,
 }: ChatHeaderProps) {
+  const { t } = useI18n()
   const isViewingAgent = targetView === 'agent'
   const title = isViewingAgent ? conversation.agentName : conversation.humanName
-  const description = isViewingAgent ? `来自 ${conversation.humanName} 的智能体` : '单聊会话'
+  const description = isViewingAgent
+    ? t('chat.agentFrom', { name: conversation.humanName })
+    : t('chat.directConversation')
   const hasAgentTarget = conversation.targetType === 'agent' && Boolean(conversation.agentName)
 
   return (
@@ -40,14 +45,18 @@ export function ChatHeader({
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <h2 className="truncate text-base font-semibold text-primary">{title}</h2>
-            {conversation.state === 'restricted' ? <Badge label="受限" variant="warning" /> : null}
-            {conversation.state === 'paused' ? <Badge label="暂停" variant="muted" /> : null}
+            {conversation.state === 'restricted' ? (
+              <Badge label={getConversationStateLabel('restricted', t)} variant="warning" />
+            ) : null}
+            {conversation.state === 'paused' ? (
+              <Badge label={getConversationStateLabel('paused', t)} variant="muted" />
+            ) : null}
           </div>
           <p className="truncate text-xs text-muted">{description}</p>
         </div>
       </div>
       <div className="relative">
-        <IconButton onClick={() => onTargetMenuOpenChange(!targetMenuOpen)} aria-label="切换对方对象">
+        <IconButton onClick={() => onTargetMenuOpenChange(!targetMenuOpen)} aria-label={t('actions.switchTarget')}>
           <ChevronDown className="h-4 w-4" />
         </IconButton>
         {targetMenuOpen ? (
@@ -72,7 +81,7 @@ export function ChatHeader({
                   targetView === 'agent' ? 'bg-muted text-primary' : 'text-secondary hover-bg-muted',
                 )}
               >
-                <Avatar label={conversation.agentName ?? '智能体'} size="sm" tone="agent" />
+                <Avatar label={conversation.agentName ?? t('chat.targetAgentFallback')} size="sm" tone="agent" />
                 <span className="truncate">{conversation.agentName}</span>
               </button>
             ) : null}

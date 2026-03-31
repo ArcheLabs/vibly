@@ -1,6 +1,7 @@
 import { MessageBubble } from './MessageBubble'
 import { NoticeCard } from './NoticeCard'
 import { SystemMessage } from './SystemMessage'
+import { useI18n } from '@/i18n'
 import type { Conversation, Message } from '@/types'
 
 type MessageListProps = {
@@ -9,10 +10,10 @@ type MessageListProps = {
 }
 
 export function MessageList({ conversation, messages }: MessageListProps) {
+  const { t } = useI18n()
+
   if (messages.length === 0) {
-    return (
-      <div className="py-12 text-center text-sm text-secondary">暂无聊天记录</div>
-    )
+    return <div className="py-12 text-center text-sm text-secondary">{t('chat.noMessages')}</div>
   }
 
   return (
@@ -28,10 +29,10 @@ export function MessageList({ conversation, messages }: MessageListProps) {
               key={message.id}
               title={
                 conversation.state === 'paused'
-                  ? '智能体暂停服务'
+                  ? t('chat.noticePaused')
                   : conversation.state === 'restricted'
-                    ? '当前会话受限'
-                    : '系统提示'
+                    ? t('chat.noticeRestricted')
+                    : t('chat.noticeSystem')
               }
               description={message.text}
             />

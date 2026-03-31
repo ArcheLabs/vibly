@@ -1,5 +1,6 @@
 import { Avatar } from '@/components/common/Avatar'
 import { Badge } from '@/components/common/Badge'
+import { useI18n } from '@/i18n'
 import { cn } from '@/lib/utils'
 import type { Identity } from '@/types'
 
@@ -14,10 +15,12 @@ export function IdentitySwitcher({
   activeIdentityId,
   onSelect,
 }: IdentitySwitcherProps) {
+  const { t } = useI18n()
+
   return (
     <div className="absolute right-0 top-[calc(100%+12px)] z-20 w-80 rounded-[28px] border border-stone-200 bg-white p-3 shadow-panel">
       <p className="px-3 pb-2 pt-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-stone-500">
-        当前发言身份
+        {t('me.identity')}
       </p>
       <div className="space-y-2">
         {identities.map((identity) => {
@@ -39,7 +42,10 @@ export function IdentitySwitcher({
                   {identity.description}
                 </p>
               </div>
-              <Badge label={identity.kind === 'human' ? '真人' : '智能体'} variant={identity.kind === 'human' ? 'human' : 'agent'} />
+              <Badge
+                label={identity.kind === 'human' ? t('common.human') : t('common.agent')}
+                variant={identity.kind === 'human' ? 'human' : 'agent'}
+              />
             </button>
           )
         })}

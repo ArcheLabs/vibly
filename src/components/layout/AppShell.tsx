@@ -8,6 +8,7 @@ import { LayoutOverlayContext } from '@/components/layout/LayoutOverlayContext'
 import { SideNav } from '@/components/layout/SideNav'
 import { IconButton } from '@/components/ui/IconButton'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
+import { useI18n } from '@/i18n'
 import { useAppContext } from '@/lib/app-context'
 import type { AppPage } from '@/types'
 
@@ -21,6 +22,7 @@ const pathToPageMap: Record<string, AppPage> = {
 }
 
 export function AppShell() {
+  const { t } = useI18n()
   const navigate = useNavigate()
   const location = useLocation()
   const isDesktop = useMediaQuery('(min-width: 1024px)')
@@ -59,7 +61,7 @@ export function AppShell() {
           {isDesktop ? <SideNav activePage={currentPage} onSelect={(page) => navigate(`/${page}`)} /> : null}
           {!isDesktop ? (
             <div className="absolute left-3 top-3 z-50 flex items-center gap-2">
-              <IconButton onClick={layoutOverlayValue.togglePanel} aria-label="切换列表区">
+              <IconButton onClick={layoutOverlayValue.togglePanel} aria-label={t('actions.togglePanel')}>
                 <PanelLeftOpen className="h-5 w-5" />
               </IconButton>
             </div>
@@ -70,7 +72,7 @@ export function AppShell() {
                 type="button"
                 className="absolute inset-0 z-20 bg-black/30"
                 onClick={layoutOverlayValue.closePanel}
-                aria-label="关闭列表区"
+                aria-label={t('actions.closeListPanel')}
               />
               <div className="absolute inset-y-0 left-0 z-30">
                 <SideNav
@@ -92,10 +94,10 @@ export function AppShell() {
                 type="button"
                 onClick={closeOverlay}
                 className="absolute inset-0 bg-black/25"
-                aria-label="close profile overlay"
+                aria-label={t('actions.closeProfileOverlay')}
               />
               {overlayUser ? (
-                <ProfilePanel title="用户信息" onClose={closeOverlay}>
+                <ProfilePanel title={t('profile.userInfo')} onClose={closeOverlay}>
                   <UserCard
                     user={overlayUser}
                     agents={agents.filter((agent) => overlayUser.publicAgentIds.includes(agent.id))}
@@ -107,7 +109,7 @@ export function AppShell() {
                 </ProfilePanel>
               ) : null}
               {overlayAgent ? (
-                <ProfilePanel title="智能体信息" onClose={closeOverlay}>
+                <ProfilePanel title={t('profile.agentInfo')} onClose={closeOverlay}>
                   <AgentCard
                     agent={overlayAgent}
                     onStartChat={() => {

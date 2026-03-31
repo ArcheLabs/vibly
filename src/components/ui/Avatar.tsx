@@ -15,8 +15,8 @@ const sizeClassMap = {
 }
 
 const toneClassMap = {
-  human: 'text-[var(--avatar-human-fg)] bg-[var(--avatar-human-bg)] border border-strong',
-  agent: 'text-[var(--avatar-agent-fg)] bg-[var(--avatar-agent-bg)] border border-default',
+  human: 'text-[var(--avatar-human-fg)] bg-[var(--avatar-human-bg)]',
+  agent: 'text-[var(--avatar-agent-fg)] bg-[var(--avatar-agent-bg)]',
   neutral: 'bg-muted text-secondary border border-default',
 }
 

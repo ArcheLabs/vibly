@@ -1,6 +1,8 @@
 import { Circle } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
+import { useI18n } from '@/i18n'
+import { getVisibilityLabel } from '@/i18n/labels'
 import { cn } from '@/lib/utils'
 import type { Agent } from '@/types'
 
@@ -11,6 +13,8 @@ type AgentListItemProps = {
 }
 
 export function AgentListItem({ agent, active, onClick }: AgentListItemProps) {
+  const { t } = useI18n()
+
   return (
     <button
       type="button"
@@ -30,7 +34,7 @@ export function AgentListItem({ agent, active, onClick }: AgentListItemProps) {
           {agent.status === 'active' ? <Circle className="h-3 w-3 fill-emerald-500 text-emerald-500" /> : null}
         </div>
         <div className="mt-2 flex items-center gap-2">
-          <Badge label={agent.visibility} variant="default" />
+          <Badge label={getVisibilityLabel(agent.visibility, t)} variant="default" />
         </div>
       </div>
     </button>
