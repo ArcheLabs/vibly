@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { type ReactNode, useRef } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { useClickOutside } from '@/hooks/useClickOutside'
 import { cn } from '@/lib/utils'
@@ -11,7 +11,7 @@ type DropdownOption = {
 }
 
 type DropdownProps = {
-  label: string
+  label: ReactNode
   open: boolean
   onOpenChange: (open: boolean) => void
   options: DropdownOption[]

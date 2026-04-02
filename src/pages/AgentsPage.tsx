@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
-import { PencilLine, Plus } from 'lucide-react'
+import { Lock, PencilLine, Plus } from 'lucide-react'
 import { AgentListItem } from '@/components/agents/AgentListItem'
 import { EmptyState } from '@/components/common/EmptyState'
 import { ListPanel } from '@/components/layout/ListPanel'
 import { MainPanel } from '@/components/layout/MainPanel'
+import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import { Divider } from '@/components/ui/Divider'
 import { IconButton } from '@/components/ui/IconButton'
@@ -60,10 +61,19 @@ export function AgentsPage() {
         {selectedAgent ? (
           <div className="p-4">
             <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.16em] text-muted">{t('agents.detailEyebrow')}</p>
-                <h2 className="mt-2 text-2xl font-semibold text-primary">{selectedAgent.name}</h2>
-                <p className="mt-2 max-w-2xl text-sm text-secondary">{selectedAgent.bio}</p>
+              <div className="flex items-start gap-3">
+                <div className="relative">
+                  <Avatar label={selectedAgent.name} size="lg" tone="agent" />
+                  {selectedAgent.visibility === 'private' ? (
+                    <span className="absolute -bottom-1 -right-1 inline-flex h-6 w-6 items-center justify-center rounded-full border border-default bg-surface text-secondary">
+                      <Lock className="h-3.5 w-3.5" />
+                    </span>
+                  ) : null}
+                </div>
+                <div>
+                  <h2 className="text-2xl font-semibold text-primary">{selectedAgent.name}</h2>
+                  <p className="mt-2 max-w-2xl text-sm text-secondary">{selectedAgent.bio}</p>
+                </div>
               </div>
               <Button variant="outline">
                 <PencilLine className="h-4 w-4" />

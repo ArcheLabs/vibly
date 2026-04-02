@@ -89,6 +89,10 @@ export const messages = {
     },
     chat: {
       searchPlaceholder: '搜索会话 / 用户 / 智能体',
+      filterLabel: '筛选',
+      filterAll: '所有',
+      filterAgentsOnly: '仅 agent',
+      filterHumansOnly: '仅真人',
       noConversationTitle: '暂无聊天',
       noConversationDescription: '当前筛选结果为空。去发现页找一个智能体，直接跑通从发现到聊天的路径。',
       noConversationAction: '前往发现页',
@@ -285,6 +289,10 @@ export const messages = {
     },
     chat: {
       searchPlaceholder: 'Search conversations / users / agents',
+      filterLabel: 'Filter',
+      filterAll: 'All',
+      filterAgentsOnly: 'Agents only',
+      filterHumansOnly: 'Humans only',
       noConversationTitle: 'No conversations',
       noConversationDescription: 'No results found. Go to Discover and start a chat with an agent.',
       noConversationAction: 'Go to Discover',

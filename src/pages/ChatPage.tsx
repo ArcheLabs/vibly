@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Plus } from 'lucide-react'
+import { ListFilter, Plus } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { ChatHeader } from '@/components/chat/ChatHeader'
 import { Composer } from '@/components/chat/Composer'
@@ -10,12 +10,14 @@ import { useLayoutOverlay } from '@/components/layout/LayoutOverlayContext'
 import { ListPanel } from '@/components/layout/ListPanel'
 import { MainPanel } from '@/components/layout/MainPanel'
 import { Divider } from '@/components/ui/Divider'
+import { Dropdown } from '@/components/ui/Dropdown'
 import { IconButton } from '@/components/ui/IconButton'
 import { SearchBar } from '@/components/ui/SearchBar'
 import { useI18n } from '@/i18n'
 import { useAppContext } from '@/lib/app-context'
 
 type HeaderTarget = 'human' | 'agent'
+type ConversationFilter = 'all' | 'agent' | 'human'
 
 export function ChatPage() {
   const { t } = useI18n()
@@ -33,6 +35,8 @@ export function ChatPage() {
 
   const [search, setSearch] = useState('')
   const [draft, setDraft] = useState('')
+  const [filterMenuOpen, setFilterMenuOpen] = useState(false)
+  const [conversationFilter, setConversationFilter] = useState<ConversationFilter>('all')
   const [targetMenuOpen, setTargetMenuOpen] = useState(false)
   const [targetView, setTargetView] = useState<HeaderTarget>('human')
 
@@ -44,10 +48,18 @@ export function ChatPage() {
           `${conversation.title} ${conversation.humanName} ${conversation.agentName ?? ''}`
             .toLowerCase()
             .includes(search.toLowerCase())
-        return matchesSearch
+        const matchesFilter =
+          conversationFilter === 'all' ? true : conversation.targetType === conversationFilter
+        return matchesSearch && matchesFilter
       }),
-    [conversations, search],
+    [conversationFilter, conversations, search],
   )
+
+  const filterLabelMap: Record<ConversationFilter, string> = {
+    all: t('chat.filterAll'),
+    agent: t('chat.filterAgentsOnly'),
+    human: t('chat.filterHumansOnly'),
+  }
 
   const selectedConversation =
     conversations.find((conversation) => conversation.id === selectedConversationId) ?? null
@@ -69,6 +81,36 @@ export function ChatPage() {
   const listHeader = (
     <div className="flex items-center gap-2">
       <SearchBar value={search} onChange={setSearch} placeholder={t('chat.searchPlaceholder')} />
+      <Dropdown
+        label={
+          <span className="inline-flex items-center gap-1.5">
+            <ListFilter className="h-4 w-4" />
+            <span>{filterLabelMap[conversationFilter]}</span>
+          </span>
+        }
+        open={filterMenuOpen}
+        onOpenChange={setFilterMenuOpen}
+        options={[
+          {
+            key: 'all',
+            label: t('chat.filterAll'),
+            active: conversationFilter === 'all',
+            onSelect: () => setConversationFilter('all'),
+          },
+          {
+            key: 'agent',
+            label: t('chat.filterAgentsOnly'),
+            active: conversationFilter === 'agent',
+            onSelect: () => setConversationFilter('agent'),
+          },
+          {
+            key: 'human',
+            label: t('chat.filterHumansOnly'),
+            active: conversationFilter === 'human',
+            onSelect: () => setConversationFilter('human'),
+          },
+        ]}
+      />
       <IconButton aria-label={t('actions.createConversation')}>
         <Plus className="h-4 w-4" />
       </IconButton>
