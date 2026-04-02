@@ -55,12 +55,6 @@ export function ChatPage() {
     [conversationFilter, conversations, search],
   )
 
-  const filterLabelMap: Record<ConversationFilter, string> = {
-    all: t('chat.filterAll'),
-    agent: t('chat.filterAgentsOnly'),
-    human: t('chat.filterHumansOnly'),
-  }
-
   const selectedConversation =
     conversations.find((conversation) => conversation.id === selectedConversationId) ?? null
 
@@ -82,14 +76,15 @@ export function ChatPage() {
     <div className="flex items-center gap-2">
       <SearchBar value={search} onChange={setSearch} placeholder={t('chat.searchPlaceholder')} />
       <Dropdown
-        label={
-          <span className="inline-flex items-center gap-1.5">
-            <ListFilter className="h-4 w-4" />
-            <span>{filterLabelMap[conversationFilter]}</span>
-          </span>
-        }
+        label={<ListFilter className="h-4 w-4" />}
         open={filterMenuOpen}
         onOpenChange={setFilterMenuOpen}
+        hideChevron
+        buttonClassName={
+          conversationFilter === 'all'
+            ? 'h-9 w-9 justify-center rounded-full px-0'
+            : 'h-9 w-9 justify-center rounded-full border-accent bg-muted text-primary px-0'
+        }
         options={[
           {
             key: 'all',
@@ -110,6 +105,7 @@ export function ChatPage() {
             onSelect: () => setConversationFilter('human'),
           },
         ]}
+        className="shrink-0"
       />
       <IconButton aria-label={t('actions.createConversation')}>
         <Plus className="h-4 w-4" />

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Boxes, Compass, Flame, PackageSearch } from 'lucide-react'
+import { Boxes, Flame, PackageSearch } from 'lucide-react'
 import { AgentListItem } from '@/components/agents/AgentListItem'
 import { AgentCard } from '@/components/profile/AgentCard'
 import { EmptyState } from '@/components/common/EmptyState'
@@ -7,7 +7,6 @@ import { ListPanel } from '@/components/layout/ListPanel'
 import { MainPanel } from '@/components/layout/MainPanel'
 import { SearchBar } from '@/components/ui/SearchBar'
 import { Button } from '@/components/ui/Button'
-import { Divider } from '@/components/ui/Divider'
 import { useI18n } from '@/i18n'
 import { useAppContext } from '@/lib/app-context'
 import { cn } from '@/lib/utils'
@@ -116,11 +115,6 @@ export function DiscoverPage() {
           />
         ) : selectedAgent ? (
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-sm text-muted">
-              <Compass className="h-4 w-4" />
-              {t('discover.intro')}
-            </div>
-            <Divider variant="full" />
             <AgentCard agent={selectedAgent} onStartChat={() => startChatWithAgent(selectedAgent.id)} />
             <div className="flex justify-center">
               <Button size="sm" variant="outline" onClick={() => openAgentProfile(selectedAgent.id)}>
