@@ -1,8 +1,5 @@
-import { Circle } from 'lucide-react'
+import { Circle, Lock } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
-import { Badge } from '@/components/ui/Badge'
-import { useI18n } from '@/i18n'
-import { getVisibilityLabel } from '@/i18n/labels'
 import { cn } from '@/lib/utils'
 import type { Agent } from '@/types'
 
@@ -13,8 +10,6 @@ type AgentListItemProps = {
 }
 
 export function AgentListItem({ agent, active, onClick }: AgentListItemProps) {
-  const { t } = useI18n()
-
   return (
     <button
       type="button"
@@ -24,7 +19,14 @@ export function AgentListItem({ agent, active, onClick }: AgentListItemProps) {
         active ? 'bg-muted' : 'hover-bg-muted',
       )}
     >
-      <Avatar label={agent.name} tone="agent" />
+      <div className="relative">
+        <Avatar label={agent.name} tone="agent" />
+        {agent.visibility === 'private' ? (
+          <span className="absolute -bottom-1 -right-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-default bg-surface text-secondary">
+            <Lock className="h-3 w-3" />
+          </span>
+        ) : null}
+      </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
@@ -32,9 +34,6 @@ export function AgentListItem({ agent, active, onClick }: AgentListItemProps) {
             <p className="mt-1 truncate text-xs text-muted">{agent.bio}</p>
           </div>
           {agent.status === 'active' ? <Circle className="h-3 w-3 fill-emerald-500 text-emerald-500" /> : null}
-        </div>
-        <div className="mt-2 flex items-center gap-2">
-          <Badge label={getVisibilityLabel(agent.visibility, t)} variant="default" />
         </div>
       </div>
     </button>
