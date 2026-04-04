@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import { ThemeProvider } from '@/components/theme/ThemeProvider'
 import { I18nProvider } from '@/i18n'
+import { MvpProvider } from '@/modules/mvp/provider'
 import './styles/tokens.css'
 import './styles/theme.css'
 import './index.css'
@@ -12,9 +13,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ThemeProvider>
       <I18nProvider>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
+        <MvpProvider>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </MvpProvider>
       </I18nProvider>
     </ThemeProvider>
   </React.StrictMode>,

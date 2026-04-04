@@ -5,11 +5,13 @@ import { ChatPage } from '@/pages/ChatPage'
 import { ContactsPage } from '@/pages/ContactsPage'
 import { DiscoverPage } from '@/pages/DiscoverPage'
 import { MePage } from '@/pages/MePage'
+import { PublicIdentityPage } from '@/pages/PublicIdentityPage'
 import { WalletPage } from '@/pages/WalletPage'
 
 export function AppRouter() {
   return (
     <Routes>
+      <Route path="/public/:identityId" element={<PublicIdentityPage />} />
       <Route path="/" element={<AppShell />}>
         <Route index element={<Navigate to="/chat" replace />} />
         <Route path="chat" element={<ChatPage />} />

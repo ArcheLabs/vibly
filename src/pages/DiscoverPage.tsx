@@ -1,42 +1,46 @@
-import { useMemo, useState } from 'react'
-import { Boxes, Flame, PackageSearch } from 'lucide-react'
-import { AgentListItem } from '@/components/agents/AgentListItem'
-import { AgentCard } from '@/components/profile/AgentCard'
+import { Link } from 'react-router-dom'
+import { Compass, ExternalLink, Search } from 'lucide-react'
 import { EmptyState } from '@/components/common/EmptyState'
 import { ListPanel } from '@/components/layout/ListPanel'
 import { MainPanel } from '@/components/layout/MainPanel'
-import { SearchBar } from '@/components/ui/SearchBar'
+import { PanelTitle } from '@/components/layout/PanelTitle'
+import { Avatar } from '@/components/ui/Avatar'
+import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
-import { useI18n } from '@/i18n'
-import { useAppContext } from '@/lib/app-context'
-import { cn } from '@/lib/utils'
+import { SearchBar } from '@/components/ui/SearchBar'
+import { useMemo, useState } from 'react'
+import { useMvpApp } from '@/modules/mvp/provider'
 
 export function DiscoverPage() {
-  const { t } = useI18n()
   const {
-    agents,
-    featuredAgentIds,
-    discoverSection,
-    setDiscoverSection,
-    selectedFeaturedAgentId,
-    setSelectedFeaturedAgentId,
-    startChatWithAgent,
-    openAgentProfile,
-  } = useAppContext()
-  const [search, setSearch] = useState('')
-  const featured = useMemo(
+    publicIdentities,
+    selectedDiscoveryIdentity,
+    selectDiscoveryIdentity,
+    getRelation,
+    setRelationStatus,
+    removeRelation,
+  } = useMvpApp()
+  const [query, setQuery] = useState('')
+
+  const matches = useMemo(
     () =>
-      featuredAgentIds
-        .map((id) => agents.find((agent) => agent.id === id))
-        .filter((agent): agent is NonNullable<typeof agent> => Boolean(agent))
-        .filter((agent) =>
-          `${agent.name} ${agent.bio} ${agent.tags.join(' ')}`
-            .toLowerCase()
-            .includes(search.toLowerCase()),
-        ),
-    [agents, featuredAgentIds, search],
+      publicIdentities.filter((identity) => {
+        const haystack = [
+          identity.identityId,
+          identity.profile?.display_name ?? '',
+          identity.profile?.bio ?? '',
+          identity.publicAgents.map((agent) => `${agent.name} ${agent.bio} ${agent.capabilities.join(' ')}`).join(' '),
+        ]
+          .join(' ')
+          .toLowerCase()
+
+        return haystack.includes(query.toLowerCase())
+      }),
+    [publicIdentities, query],
   )
-  const selectedAgent = featured.find((agent) => agent.id === selectedFeaturedAgentId) ?? featured[0]
+
+  const selected = matches.find((identity) => identity.identityId === selectedDiscoveryIdentity?.identityId) ?? matches[0] ?? null
+  const relation = selected ? getRelation(selected.identityId) : null
 
   return (
     <>
@@ -45,88 +49,143 @@ export function DiscoverPage() {
         contentClassName="min-h-0 flex-1 overflow-y-auto"
         header={
           <div className="space-y-3">
-            <SearchBar value={search} onChange={setSearch} placeholder={t('discover.searchPlaceholder')} />
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setDiscoverSection('featured')}
-                className={cn(
-                  'flex flex-1 items-center justify-center gap-1 rounded-full px-3 py-2 text-sm text-muted transition hover-bg-muted',
-                  discoverSection === 'featured' && 'border border-default bg-surface text-primary',
-                )}
-              >
-                <Flame className="h-4 w-4" />
-                {t('discover.tabFeatured')}
-              </button>
-              <button
-                type="button"
-                onClick={() => setDiscoverSection('plugins')}
-                className={cn(
-                  'flex flex-1 items-center justify-center gap-1 rounded-full px-3 py-2 text-sm text-muted transition hover-bg-muted',
-                  discoverSection === 'plugins' && 'border border-default bg-surface text-primary',
-                )}
-              >
-                <Boxes className="h-4 w-4" />
-                {t('discover.tabPlugins')}
-              </button>
-            </div>
+            <PanelTitle icon={Compass} title="Discovery" />
+            <SearchBar value={query} onChange={setQuery} placeholder="Search public identities and agents" />
           </div>
         }
       >
-        {discoverSection === 'featured' ? (
-          featured.length > 0 ? (
-            <div>
-              {featured.map((agent) => (
-                <AgentListItem
-                  key={agent.id}
-                  agent={agent}
-                  active={agent.id === selectedAgent?.id}
-                  onClick={() => setSelectedFeaturedAgentId(agent.id)}
-                />
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              eyebrow={t('nav.discover')}
-              title={t('discover.noResultTitle')}
-              description={t('discover.noResultDescription')}
-            />
-          )
-        ) : (
-          <div className="p-3">
-            <div className="app-subcard p-3">
-              <div className="flex items-center gap-3">
-                <PackageSearch className="h-5 w-5 text-accent" />
-                <div>
-                  <p className="text-sm font-medium text-primary">{t('discover.tabPlugins')}</p>
-                  <p className="text-xs text-muted">{t('discover.pluginPlaceholder')}</p>
+        {matches.length > 0 ? (
+          <div>
+            {matches.map((identity) => (
+              <button
+                key={identity.identityId}
+                type="button"
+                onClick={() => selectDiscoveryIdentity(identity.identityId)}
+                className="flex w-full items-start gap-3 border-b border-default bg-surface px-3 py-3 text-left transition hover-bg-muted"
+              >
+                <Avatar label={identity.profile?.display_name ?? identity.identityId} tone="human" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="truncate text-sm font-medium text-primary">
+                        {identity.profile?.display_name ?? identity.identityId}
+                      </p>
+                      <p className="mt-1 truncate text-xs text-muted">
+                        {identity.profile?.headline ?? identity.profile?.bio ?? identity.identityId}
+                      </p>
+                    </div>
+                    <Badge label={`${identity.publicAgents.length} agents`} variant="default" />
+                  </div>
                 </div>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            eyebrow="Discovery"
+            title="No public matches"
+            description="Try another search term or publish a profile and agent from the local identity flow."
+          />
+        )}
+      </ListPanel>
+
+      <MainPanel>
+        {selected ? (
+          <div className="space-y-4 p-3">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex items-start gap-4">
+                <Avatar label={selected.profile?.display_name ?? selected.identityId} size="lg" tone="human" />
+                <div>
+                  <p className="text-xs uppercase tracking-[0.16em] text-muted">Public identity</p>
+                  <h2 className="mt-2 text-2xl font-semibold text-primary">
+                    {selected.profile?.display_name ?? selected.identityId}
+                  </h2>
+                  <p className="mt-2 max-w-2xl text-sm text-secondary">
+                    {selected.profile?.bio ?? 'No public bio available.'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Badge label={selected.summary.status} variant="accent" />
+                <Badge label={`Contact ${selected.profile?.default_contact_policy ?? 'closed'}`} variant="warning" />
+                {relation ? <Badge label={`Local relation: ${relation.status}`} variant="default" /> : null}
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-default bg-panel p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.16em] text-muted">Public profile</p>
+                  <p className="mt-2 text-sm text-secondary">
+                    Headline: {selected.profile?.headline ?? 'No public headline'}
+                  </p>
+                </div>
+                <Link
+                  to={`/public/${selected.identityId}`}
+                  className="inline-flex items-center gap-2 rounded-full border border-default bg-surface px-4 py-2 text-sm text-primary transition hover-bg-muted"
+                >
+                  Open public page
+                  <ExternalLink className="h-4 w-4" />
+                </Link>
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" onClick={() => setRelationStatus(selected.identityId, 'contact')}>
+                  Contact
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setRelationStatus(selected.identityId, 'favorite')}>
+                  Favorite
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setRelationStatus(selected.identityId, 'blocked')}>
+                  Block
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => removeRelation(selected.identityId)}>
+                  Clear
+                </Button>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-default bg-panel p-4">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-lg font-semibold text-primary">Public agents</h3>
+                <div className="inline-flex items-center gap-2 text-sm text-muted">
+                  <Search className="h-4 w-4" />
+                  Gateway-style discovery list
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                {selected.publicAgents.length === 0 ? (
+                  <p className="text-sm text-muted">No public agents have been published for this identity yet.</p>
+                ) : (
+                  selected.publicAgents.map((agent) => (
+                    <div key={agent.agent_id} className="rounded-2xl border border-default bg-surface p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-primary">{agent.name}</p>
+                          <p className="mt-1 text-sm text-secondary">{agent.bio}</p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <Badge label={agent.status} variant={agent.status === 'active' ? 'accent' : 'muted'} />
+                          <Badge label={agent.visibility} variant="default" />
+                        </div>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {agent.capabilities.map((capability) => (
+                          <Badge key={capability} label={capability} variant="default" />
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
-        )}
-      </ListPanel>
-      <MainPanel>
-        {discoverSection === 'plugins' ? (
-          <EmptyState
-            eyebrow={t('discover.tabPlugins')}
-            title={t('discover.pluginTitle')}
-            description={t('discover.pluginDescription')}
-          />
-        ) : selectedAgent ? (
-          <div className="space-y-3">
-            <AgentCard agent={selectedAgent} onStartChat={() => startChatWithAgent(selectedAgent.id)} />
-            <div className="flex justify-center">
-              <Button size="sm" variant="outline" onClick={() => openAgentProfile(selectedAgent.id)}>
-                {t('actions.openAgentProfile')}
-              </Button>
-            </div>
-          </div>
         ) : (
           <EmptyState
-            eyebrow={t('nav.discover')}
-            title={t('discover.pickTitle')}
-            description={t('discover.pickDescription')}
+            eyebrow="Discovery"
+            title="Pick a public identity"
+            description="Select a search result to inspect the aggregated profile and public agents."
           />
         )}
       </MainPanel>
