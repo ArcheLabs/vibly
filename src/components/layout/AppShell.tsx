@@ -7,7 +7,6 @@ import { UserCard } from '@/components/profile/UserCard'
 import { LayoutOverlayContext } from '@/components/layout/LayoutOverlayContext'
 import { SideNav } from '@/components/layout/SideNav'
 import { GlobalBannerStack } from '@/components/system/GlobalBannerStack'
-import { NotificationCenter } from '@/components/system/NotificationCenter'
 import { IconButton } from '@/components/ui/IconButton'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { useI18n } from '@/i18n'
@@ -88,17 +87,23 @@ export function AppShell() {
     <LayoutOverlayContext.Provider value={layoutOverlayValue}>
       <div className="relative flex min-h-screen bg-app text-primary">
         <GlobalBannerStack banners={banners} onDismiss={dismissBanner} />
-        <NotificationCenter
-          open={uiState.notificationCenterOpen}
-          notifications={localPrivateState.notifications}
-          unreadCount={unreadNotificationCount}
-          onToggle={toggleNotificationCenter}
-          onMarkRead={markNotificationAsRead}
-          onMarkAllRead={markAllNotificationsAsRead}
-          onDismiss={dismissNotification}
-        />
+        {isDesktop ? (
+          <div className="fixed inset-y-0 left-0 z-40 hidden lg:block">
+            <SideNav
+              activePage={currentPage}
+              onSelect={handleSideNavSelect}
+              notifications={localPrivateState.notifications}
+              unreadNotificationCount={unreadNotificationCount}
+              notificationCenterOpen={uiState.notificationCenterOpen}
+              onToggleNotificationCenter={toggleNotificationCenter}
+              onMarkNotificationRead={markNotificationAsRead}
+              onMarkAllNotificationsRead={markAllNotificationsAsRead}
+              onDismissNotification={dismissNotification}
+            />
+          </div>
+        ) : null}
         <div className="relative flex min-h-screen w-full overflow-hidden border border-default bg-panel">
-          {isDesktop ? <SideNav activePage={currentPage} onSelect={handleSideNavSelect} /> : null}
+          {isDesktop ? <div className="hidden w-[76px] shrink-0 lg:block" aria-hidden="true" /> : null}
           {!isDesktop ? (
             <div className="absolute left-3 top-3 z-50 flex items-center gap-2">
               <IconButton onClick={layoutOverlayValue.togglePanel} aria-label={t('actions.togglePanel')}>
@@ -117,6 +122,13 @@ export function AppShell() {
               <div className="absolute inset-y-0 left-0 z-30">
                 <SideNav
                   activePage={currentPage}
+                  notifications={localPrivateState.notifications}
+                  unreadNotificationCount={unreadNotificationCount}
+                  notificationCenterOpen={uiState.notificationCenterOpen}
+                  onToggleNotificationCenter={toggleNotificationCenter}
+                  onMarkNotificationRead={markNotificationAsRead}
+                  onMarkAllNotificationsRead={markAllNotificationsAsRead}
+                  onDismissNotification={dismissNotification}
                   onSelect={(page, isActive) => {
                     handleSideNavSelect(page, isActive)
                     layoutOverlayValue.closePanel()

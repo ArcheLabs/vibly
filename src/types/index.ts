@@ -58,6 +58,8 @@ export type Conversation = {
   state: 'normal' | 'empty' | 'restricted' | 'paused'
 }
 
+export type ConversationFilter = 'all' | 'agent' | 'human'
+
 export type Message = {
   id: string
   conversationId: string

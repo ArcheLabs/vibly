@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 
 type DropdownOption = {
   key: string
-  label: string
+  label: ReactNode
   onSelect: () => void
   active?: boolean
 }
@@ -57,7 +57,7 @@ export function Dropdown({
                 onOpenChange(false)
               }}
               className={cn(
-                'flex w-full items-center rounded-sm px-2 py-1.5 text-left text-sm transition',
+                'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm transition',
                 option.active ? 'bg-muted text-primary' : 'text-secondary hover-bg-muted',
               )}
             >

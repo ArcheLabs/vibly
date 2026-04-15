@@ -18,7 +18,7 @@ export function ContactListItem({ contact, active, onClick }: ContactListItemPro
         active ? 'bg-muted' : 'hover-bg-muted',
       )}
     >
-      <Avatar label={contact.name} tone={contact.kind === 'agent' ? 'agent' : 'human'} />
+      <Avatar label={contact.name} src={contact.avatar} tone={contact.kind === 'agent' ? 'agent' : 'human'} />
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">

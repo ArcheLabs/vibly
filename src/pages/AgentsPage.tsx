@@ -1,51 +1,106 @@
-import { useMemo, useState } from 'react'
-import { Globe, Lock, PencilLine, Plus, RefreshCw, Trash2 } from 'lucide-react'
-import { AgentListItem } from '@/components/agents/AgentListItem'
+import { useEffect, useMemo, useState } from 'react'
+import { Plus } from 'lucide-react'
 import { EmptyState } from '@/components/common/EmptyState'
 import { ListPanel } from '@/components/layout/ListPanel'
 import { MainPanel } from '@/components/layout/MainPanel'
+import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
-import { Divider } from '@/components/ui/Divider'
 import { Input } from '@/components/ui/Input'
 import { SearchBar } from '@/components/ui/SearchBar'
 import { cn } from '@/lib/utils'
-import { useMvpApp } from '@/modules/mvp/provider'
-import type { AgentListFilter, AgentRecord } from '@/modules/agents/types'
+import { useAhipPreview } from '@/modules/ahip-preview/provider'
+import type { AhipPreviewProviderKind } from '@/modules/ahip-preview/types'
 
-const filterTabs: AgentListFilter[] = ['all', 'private', 'public', 'draft']
+const providerOptions: Array<{ value: AhipPreviewProviderKind; label: string; baseUrl: string; model: string }> = [
+  { value: 'openai-compatible', label: 'OpenAI compatible', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4.1-mini' },
+  { value: 'deepseek', label: 'DeepSeek', baseUrl: 'https://api.deepseek.com', model: 'deepseek-chat' },
+  { value: 'openrouter', label: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1', model: 'openai/gpt-4.1-mini' },
+  { value: 'ollama', label: 'Ollama', baseUrl: 'http://localhost:11434', model: 'llama3.1' },
+  { value: 'lm-studio', label: 'LM Studio', baseUrl: 'http://localhost:1234/v1', model: 'local-model' },
+  { value: 'anthropic', label: 'Anthropic', baseUrl: 'https://api.anthropic.com/v1', model: 'claude-3-5-sonnet-latest' },
+  { value: 'gemini', label: 'Gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta', model: 'gemini-1.5-pro' },
+  { value: 'webllm', label: 'WebLLM (planned)', baseUrl: 'browser://webllm', model: 'local-webgpu' },
+]
 
-function publishActionLabel(agent: AgentRecord) {
-  if (agent.publishState === 'public_live' || agent.publishState === 'public_dirty') return 'Republish'
-  return 'Publish'
-}
+const defaultSystemPrompt =
+  'You are a careful AHIP preview agent. Use AHIP only for durable, structured, or actionable interactions.'
 
 export function AgentsPage() {
   const {
-    currentIdentity,
-    filteredLocalAgents,
-    selectedLocalAgent,
-    uiState,
+    agents,
+    secrets,
+    selectedAgent,
+    selectedProviderTest,
+    hydrating,
     createAgent,
-    selectLocalAgent,
-    setAgentFilter,
     updateAgent,
-    deleteAgent,
-    publishAgent,
-  } = useMvpApp()
+    updateAgentApiKey,
+    deleteAgentApiKey,
+    selectSession,
+    testProvider,
+    sessions,
+  } = useAhipPreview()
   const [search, setSearch] = useState('')
+  const [creating, setCreating] = useState(false)
+  const [focusedAgentId, setFocusedAgentId] = useState<string | null>(null)
+
+  // New agent form state
+  const [newAgentName, setNewAgentName] = useState('AHIP Agent')
+  const [newBio, setNewBio] = useState('')
+  const [newProvider, setNewProvider] = useState<AhipPreviewProviderKind>('openai-compatible')
+  const selectedProviderPreset = providerOptions.find((option) => option.value === newProvider) ?? providerOptions[0]
+  const [newBaseUrl, setNewBaseUrl] = useState(selectedProviderPreset.baseUrl)
+  const [newModel, setNewModel] = useState(selectedProviderPreset.model)
+  const [newApiKey, setNewApiKey] = useState('')
+  const [newSystemPrompt, setNewSystemPrompt] = useState(defaultSystemPrompt)
+
+  useEffect(() => {
+    const preset = providerOptions.find((option) => option.value === newProvider)
+    if (!preset) return
+    setNewBaseUrl(preset.baseUrl)
+    setNewModel(preset.model)
+  }, [newProvider])
 
   const visibleAgents = useMemo(
     () =>
-      filteredLocalAgents.filter((agent) =>
-        `${agent.name} ${agent.bio ?? ''} ${agent.capabilities.join(' ')}`
+      agents.filter((agent) =>
+        `${agent.name} ${agent.bio ?? ''} ${agent.model} ${agent.provider}`
           .toLowerCase()
           .includes(search.toLowerCase()),
       ),
-    [filteredLocalAgents, search],
+    [agents, search],
   )
 
-  const focusedAgent = visibleAgents.find((agent) => agent.agentId === selectedLocalAgent?.agentId) ?? visibleAgents[0] ?? null
+  const focusedAgent =
+    visibleAgents.find((a) => a.agentId === focusedAgentId) ??
+    visibleAgents.find((a) => a.agentId === selectedAgent?.agentId) ??
+    visibleAgents[0] ??
+    null
+
+  const focusedApiKey = focusedAgent ? secrets.apiKeysByAgentId[focusedAgent.agentId] ?? '' : ''
+  const focusedProviderTest = focusedAgent
+    ? selectedAgent?.agentId === focusedAgent.agentId
+      ? selectedProviderTest
+      : { status: 'idle' as const }
+    : { status: 'idle' as const }
+
+  const handleCreateAgent = () => {
+    createAgent({
+      name: newAgentName,
+      bio: newBio,
+      provider: newProvider,
+      baseUrl: newBaseUrl,
+      model: newModel,
+      apiKey: newApiKey,
+      systemPrompt: newSystemPrompt,
+    })
+    setCreating(false)
+    setNewApiKey('')
+    setNewBio('')
+    setNewAgentName('AHIP Agent')
+    setNewSystemPrompt(defaultSystemPrompt)
+  }
 
   return (
     <>
@@ -55,48 +110,87 @@ export function AgentsPage() {
         header={
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <SearchBar value={search} onChange={setSearch} placeholder="Search local agents" />
-              <Button size="sm" variant="accent" onClick={createAgent}>
+              <SearchBar value={search} onChange={setSearch} placeholder="Search agents" />
+              <Button
+                size="sm"
+                variant="accent"
+                onClick={() => setCreating((open) => !open)}
+                className="h-9 w-9 shrink-0 rounded-full px-0"
+                aria-label="Create agent"
+              >
                 <Plus className="h-4 w-4" />
-                Create
               </Button>
-            </div>
-            <div className="flex gap-2">
-              {filterTabs.map((filter) => (
-                <button
-                  key={filter}
-                  type="button"
-                  onClick={() => setAgentFilter(filter)}
-                  className={cn(
-                    'flex-1 rounded-full border px-3 py-2 text-sm transition',
-                    uiState.agentFilter === filter
-                      ? 'border-accent bg-muted text-primary'
-                      : 'border-default bg-surface text-muted hover-bg-muted',
-                  )}
-                >
-                  {filter}
-                </button>
-              ))}
             </div>
           </div>
         }
       >
+        {creating ? (
+          <div className="space-y-2 border-b border-default bg-muted/40 p-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">New AHIP agent</p>
+            <Input value={newAgentName} onChange={(e) => setNewAgentName(e.target.value)} placeholder="Agent name" />
+            <Input value={newBio} onChange={(e) => setNewBio(e.target.value)} placeholder="Short bio (optional)" />
+            <select
+              className="h-10 w-full rounded-md border border-default bg-surface px-3 text-sm text-primary outline-none"
+              value={newProvider}
+              onChange={(e) => setNewProvider(e.target.value as AhipPreviewProviderKind)}
+            >
+              {providerOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+            <Input value={newBaseUrl} onChange={(e) => setNewBaseUrl(e.target.value)} placeholder="Base URL" />
+            <Input value={newModel} onChange={(e) => setNewModel(e.target.value)} placeholder="Model" />
+            <Input value={newApiKey} onChange={(e) => setNewApiKey(e.target.value)} placeholder="API key (local BYOK)" type="password" />
+            <textarea
+              value={newSystemPrompt}
+              onChange={(e) => setNewSystemPrompt(e.target.value)}
+              className="min-h-[84px] w-full rounded-md border border-default bg-surface px-3 py-2 text-sm text-primary outline-none"
+              placeholder="System prompt"
+            />
+            <div className="flex gap-2">
+              <Button variant="accent" className="flex-1" onClick={handleCreateAgent}>
+                Create
+              </Button>
+              <Button variant="outline" onClick={() => setCreating(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        ) : null}
         {visibleAgents.length > 0 ? (
           <div>
-            {visibleAgents.map((agent) => (
-              <AgentListItem
-                key={agent.agentId}
-                agent={agent}
-                active={agent.agentId === focusedAgent?.agentId}
-                onClick={() => selectLocalAgent(agent.agentId)}
-              />
-            ))}
+            {visibleAgents.map((agent) => {
+              const active = agent.agentId === focusedAgent?.agentId
+              const hasKey = Boolean(secrets.apiKeysByAgentId[agent.agentId])
+
+              return (
+                <button
+                  key={agent.agentId}
+                  type="button"
+                  onClick={() => setFocusedAgentId(agent.agentId)}
+                  className={cn(
+                    'flex w-full items-start gap-3 border-b border-default px-3 py-3 text-left transition',
+                    active ? 'bg-muted' : 'bg-surface hover-bg-muted',
+                  )}
+                >
+                  <Avatar label={agent.name} src={agent.avatar} tone="agent" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-primary">{agent.name}</p>
+                    <p className="mt-0.5 truncate text-xs text-muted">{agent.bio || agent.model}</p>
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      <Badge label={agent.provider} variant="default" />
+                      <Badge label={hasKey ? 'LangGraph' : 'Local'} variant={hasKey ? 'accent' : 'muted'} />
+                    </div>
+                  </div>
+                </button>
+              )
+            })}
           </div>
         ) : (
           <EmptyState
             eyebrow="Agents"
-            title="No agents in this filter"
-            description="Create a local private agent or change the filter to inspect published state."
+            title="No agents yet"
+            description="Create a new AHIP agent to get started."
           />
         )}
       </ListPanel>
@@ -105,183 +199,127 @@ export function AgentsPage() {
         {focusedAgent ? (
           <div className="space-y-4 p-3">
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p className="text-xs uppercase tracking-[0.16em] text-muted">Agent details</p>
-                <h2 className="mt-2 text-2xl font-semibold text-primary">{focusedAgent.name}</h2>
-                <p className="mt-2 text-sm text-secondary">
-                  Private/public visibility stays local until you publish the agent registry.
-                </p>
+              <div className="flex items-start gap-4">
+                <Avatar label={focusedAgent.name} src={focusedAgent.avatar} size="lg" tone="agent" />
+                <div>
+                  <h2 className="text-2xl font-semibold text-primary">{focusedAgent.name}</h2>
+                  <p className="mt-1 text-sm text-secondary">
+                    {focusedAgent.bio || 'AHIP preview agent — add a bio in the settings below.'}
+                  </p>
+                </div>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Badge label={focusedAgent.publishState} variant="default" />
-                <Badge label={focusedAgent.visibility} variant={focusedAgent.visibility === 'public' ? 'accent' : 'muted'} />
-                <Badge label={focusedAgent.status} variant={focusedAgent.status === 'active' ? 'accent' : 'muted'} />
+                <Badge label={focusedAgent.provider} variant="default" />
+                <Badge label={focusedAgent.model.split('/').pop() ?? focusedAgent.model} variant="muted" />
+                <Badge label={focusedApiKey ? 'LangGraph LLM' : 'Local demo'} variant={focusedApiKey ? 'accent' : 'warning'} />
               </div>
             </div>
 
             <div className="grid gap-3 lg:grid-cols-2">
+              {/* ── Profile ── */}
               <div className="space-y-3 rounded-3xl border border-default bg-panel p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Profile</p>
                 <label className="block text-sm text-secondary">
                   Name
                   <Input
                     className="mt-2"
                     value={focusedAgent.name}
-                    onChange={(event) => updateAgent(focusedAgent.agentId, { name: event.target.value })}
+                    onChange={(e) => updateAgent(focusedAgent.agentId, { name: e.target.value })}
                   />
                 </label>
                 <label className="block text-sm text-secondary">
                   Bio
                   <textarea
                     value={focusedAgent.bio ?? ''}
-                    onChange={(event) => updateAgent(focusedAgent.agentId, { bio: event.target.value })}
-                    className="mt-2 min-h-[112px] w-full rounded-2xl border border-default bg-surface px-3 py-3 text-sm text-primary outline-none focus-border-strong"
+                    onChange={(e) => updateAgent(focusedAgent.agentId, { bio: e.target.value })}
+                    className="mt-2 min-h-[80px] w-full rounded-2xl border border-default bg-surface px-3 py-3 text-sm text-primary outline-none focus-border-strong"
+                    placeholder="Brief description of the agent"
                   />
                 </label>
                 <label className="block text-sm text-secondary">
-                  Description
+                  System prompt
                   <textarea
-                    value={focusedAgent.description ?? ''}
-                    onChange={(event) => updateAgent(focusedAgent.agentId, { description: event.target.value })}
+                    value={focusedAgent.systemPrompt}
+                    onChange={(e) => updateAgent(focusedAgent.agentId, { systemPrompt: e.target.value })}
                     className="mt-2 min-h-[112px] w-full rounded-2xl border border-default bg-surface px-3 py-3 text-sm text-primary outline-none focus-border-strong"
                   />
                 </label>
               </div>
 
+              {/* ── Provider config ── */}
               <div className="space-y-3 rounded-3xl border border-default bg-panel p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Provider</p>
                 <label className="block text-sm text-secondary">
-                  Visibility
+                  Provider
                   <select
                     className="mt-2 h-10 w-full rounded-2xl border border-default bg-surface px-3 text-sm text-primary outline-none"
-                    value={focusedAgent.visibility}
-                    onChange={(event) =>
-                      updateAgent(focusedAgent.agentId, {
-                        visibility: event.target.value as AgentRecord['visibility'],
-                      })
-                    }
+                    value={focusedAgent.provider}
+                    onChange={(e) => updateAgent(focusedAgent.agentId, { provider: e.target.value as AhipPreviewProviderKind })}
                   >
-                    <option value="private">private</option>
-                    <option value="public">public</option>
+                    {providerOptions.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
                   </select>
                 </label>
-
                 <label className="block text-sm text-secondary">
-                  Status
-                  <select
-                    className="mt-2 h-10 w-full rounded-2xl border border-default bg-surface px-3 text-sm text-primary outline-none"
-                    value={focusedAgent.status}
-                    onChange={(event) =>
-                      updateAgent(focusedAgent.agentId, {
-                        status: event.target.value as AgentRecord['status'],
-                      })
-                    }
-                  >
-                    <option value="active">active</option>
-                    <option value="paused">paused</option>
-                  </select>
-                </label>
-
-                <label className="block text-sm text-secondary">
-                  Pricing mode
-                  <select
-                    className="mt-2 h-10 w-full rounded-2xl border border-default bg-surface px-3 text-sm text-primary outline-none"
-                    value={focusedAgent.pricingMode}
-                    onChange={(event) =>
-                      updateAgent(focusedAgent.agentId, {
-                        pricingMode: event.target.value as AgentRecord['pricingMode'],
-                      })
-                    }
-                  >
-                    <option value="free">free</option>
-                    <option value="per_message">per_message</option>
-                    <option value="per_session">per_session</option>
-                  </select>
-                </label>
-
-                <label className="block text-sm text-secondary">
-                  Capabilities (comma separated)
+                  Base URL
                   <Input
                     className="mt-2"
-                    value={focusedAgent.capabilities.join(', ')}
-                    onChange={(event) =>
-                      updateAgent(focusedAgent.agentId, {
-                        capabilities: event.target.value
-                          .split(',')
-                          .map((item) => item.trim())
-                          .filter(Boolean),
-                      })
-                    }
+                    value={focusedAgent.baseUrl}
+                    onChange={(e) => updateAgent(focusedAgent.agentId, { baseUrl: e.target.value })}
                   />
                 </label>
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-default bg-panel p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.16em] text-muted">On-chain publishing</p>
-                  <h3 className="mt-2 text-lg font-semibold text-primary">Registry pointer workflow</h3>
-                </div>
+                <label className="block text-sm text-secondary">
+                  Model
+                  <Input
+                    className="mt-2"
+                    value={focusedAgent.model}
+                    onChange={(e) => updateAgent(focusedAgent.agentId, { model: e.target.value })}
+                  />
+                </label>
+                <label className="block text-sm text-secondary">
+                  API key (stays in this browser only)
+                  <Input
+                    className="mt-2"
+                    type="password"
+                    value={focusedApiKey}
+                    placeholder="Enter API key for BYOK preview"
+                    onChange={(e) => updateAgentApiKey(focusedAgent.agentId, e.target.value)}
+                  />
+                </label>
                 <div className="flex flex-wrap gap-2">
-                  <Badge label={`Owner ${currentIdentity?.identityId ?? 'not registered'}`} variant="default" />
-                  {focusedAgent.lastPublishedAt ? (
-                    <Badge label={`Published ${new Date(focusedAgent.lastPublishedAt).toLocaleString()}`} variant="muted" />
-                  ) : null}
+                  <Button variant="outline" onClick={() => deleteAgentApiKey(focusedAgent.agentId)}>
+                    Clear key
+                  </Button>
+                  <Button
+                    variant="outline"
+                    disabled={focusedProviderTest.status === 'testing' || hydrating}
+                    onClick={() => {
+                      // Make sure this agent is selected so the test applies
+                      const firstSession = sessions.find((s) => s.agentId === focusedAgent.agentId)
+                      if (firstSession) selectSession(firstSession.sessionId)
+                      void testProvider(focusedAgent.agentId)
+                    }}
+                  >
+                    {focusedProviderTest.status === 'testing' ? 'Testing...' : 'Test provider'}
+                  </Button>
                 </div>
-              </div>
-
-              <Divider variant="full" className="my-4" />
-
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                <div className="rounded-2xl border border-default bg-surface p-3">
-                  <p className="text-xs uppercase tracking-[0.14em] text-muted">Visibility</p>
-                  <p className="mt-2 flex items-center gap-2 text-sm text-primary">
-                    {focusedAgent.visibility === 'public' ? <Globe className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
-                    {focusedAgent.visibility}
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-default bg-surface p-3">
-                  <p className="text-xs uppercase tracking-[0.14em] text-muted">Publish state</p>
-                  <p className="mt-2 text-sm text-primary">{focusedAgent.publishState}</p>
-                </div>
-                <div className="rounded-2xl border border-default bg-surface p-3">
-                  <p className="text-xs uppercase tracking-[0.14em] text-muted">Last published</p>
-                  <p className="mt-2 text-sm text-primary">
-                    {focusedAgent.lastPublishedAt ? new Date(focusedAgent.lastPublishedAt).toLocaleString() : 'never'}
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-default bg-surface p-3">
-                  <p className="text-xs uppercase tracking-[0.14em] text-muted">Required action</p>
-                  <p className="mt-2 text-sm text-primary">
-                    {focusedAgent.visibility === 'public' ? publishActionLabel(focusedAgent) : 'Keep local or switch to public'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-4 flex flex-wrap gap-3">
-                <Button
-                  variant="accent"
-                  onClick={() => publishAgent(focusedAgent.agentId)}
-                  disabled={!currentIdentity || focusedAgent.visibility !== 'public'}
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  {publishActionLabel(focusedAgent)}
-                </Button>
-                <Button variant="outline" onClick={() => updateAgent(focusedAgent.agentId, { visibility: 'public' })}>
-                  <Globe className="h-4 w-4" />
-                  Make public draft
-                </Button>
-                <Button variant="ghost" onClick={() => deleteAgent(focusedAgent.agentId)}>
-                  <Trash2 className="h-4 w-4" />
-                  Delete
-                </Button>
+                {focusedProviderTest.status !== 'idle' ? (
+                  <div className="rounded-md border border-default bg-muted px-3 py-2 text-xs text-secondary">
+                    <span className="font-semibold text-primary">Result:</span>{' '}
+                    {focusedProviderTest.status}
+                    {focusedProviderTest.testedAt ? ` at ${new Date(focusedProviderTest.testedAt).toLocaleString()}` : ''}
+                    {focusedProviderTest.message ? ` — ${focusedProviderTest.message}` : ''}
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
         ) : (
           <EmptyState
             eyebrow="Agents"
-            title="Select an agent"
-            description="Pick a local agent to edit its visibility, profile, pricing, and publish state."
+            title={agents.length ? 'Select an agent' : 'Create an agent'}
+            description={agents.length ? 'Pick an agent to edit its profile and provider settings.' : 'Click + in the sidebar to create your first AHIP agent.'}
           />
         )}
       </MainPanel>

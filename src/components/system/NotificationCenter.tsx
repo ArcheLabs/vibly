@@ -12,6 +12,9 @@ type NotificationCenterProps = {
   onMarkRead: (notificationId: string) => void
   onMarkAllRead: () => void
   onDismiss: (notificationId: string) => void
+  className?: string
+  panelClassName?: string
+  buttonClassName?: string
 }
 
 const categoryToneMap: Record<AppNotification['type'], string> = {
@@ -29,13 +32,19 @@ export function NotificationCenter({
   onMarkRead,
   onMarkAllRead,
   onDismiss,
+  className,
+  panelClassName,
+  buttonClassName,
 }: NotificationCenterProps) {
   return (
-    <div className="absolute right-4 top-4 z-50">
+    <div className={cn('relative z-50', className)}>
       <button
         type="button"
         onClick={onToggle}
-        className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-default bg-panel text-secondary transition hover-bg-muted"
+        className={cn(
+          'relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-default bg-panel text-secondary transition hover-bg-muted',
+          buttonClassName,
+        )}
         aria-label="Toggle notification center"
       >
         <Bell className="h-4 w-4" />
@@ -47,7 +56,12 @@ export function NotificationCenter({
       </button>
 
       {open ? (
-        <div className="mt-3 w-[320px] rounded-3xl border border-default bg-panel p-3 shadow-2xl">
+        <div
+          className={cn(
+            'mt-3 w-[320px] rounded-3xl border border-default bg-panel p-3 shadow-2xl',
+            panelClassName,
+          )}
+        >
           <div className="flex items-center justify-between gap-3 border-b border-default pb-3">
             <div>
               <p className="text-sm font-semibold text-primary">Notification Center</p>

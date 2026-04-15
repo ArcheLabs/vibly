@@ -1,9 +1,9 @@
 import { Heart, MessageSquareText } from 'lucide-react'
-import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Divider } from '@/components/ui/Divider'
 import { IconButton } from '@/components/ui/IconButton'
+import { ProfileHeader } from '@/components/profile/ProfileHeader'
 import { useI18n } from '@/i18n'
 import { getAgentStatusLabel, getPricingLabel } from '@/i18n/labels'
 import type { Agent } from '@/types'
@@ -17,19 +17,20 @@ export function AgentCard({ agent, onStartChat }: AgentCardProps) {
   const { t } = useI18n()
 
   return (
-    <div className="space-y-3">
-      <div className="p-1">
-        <div className="flex items-center gap-4">
-          <Avatar label={agent.name} size="lg" tone="agent" />
-          <div className="min-w-0">
-            <h3 className="text-2xl font-semibold text-primary">{agent.name}</h3>
-            <p className="mt-1 text-sm text-muted">{t('common.ownerAgent', { name: agent.ownerName })}</p>
-          </div>
-          <IconButton className="ml-auto" aria-label={t('actions.favorite')}>
-            <Heart className="h-4 w-4" />
-          </IconButton>
-        </div>
-        <p className="mt-4 text-sm text-secondary">{agent.bio}</p>
+    <div className="p-4">
+      <div>
+        <ProfileHeader
+          title={agent.name}
+          subtitle={t('common.ownerAgent', { name: agent.ownerName })}
+          description={agent.bio}
+          avatarLabel={agent.name}
+          avatarSrc={agent.avatar}
+          actions={
+            <IconButton className="ml-auto" aria-label={t('actions.favorite')}>
+              <Heart className="h-4 w-4" />
+            </IconButton>
+          }
+        />
         <Divider variant="full" className="my-4" />
         <div className="mt-4 flex flex-wrap gap-2">
           <Badge
@@ -51,11 +52,9 @@ export function AgentCard({ agent, onStartChat }: AgentCardProps) {
         </div>
       </div>
       <Divider variant="full" />
-      <div className="p-1">
+      <div className="pt-4">
         <h4 className="font-semibold text-primary">{t('discover.previewStatus')}</h4>
-        <p className="mt-2 text-sm text-secondary">
-          {t('discover.previewDescription')}
-        </p>
+        <p className="mt-2 text-sm text-secondary">{t('discover.previewDescription')}</p>
       </div>
     </div>
   )

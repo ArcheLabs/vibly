@@ -1,3 +1,5 @@
+import humanLinzAvatar from '@/assets/avatars/humans/human-linz.png'
+import humanYingAvatar from '@/assets/avatars/humans/human-ying.png'
 import type { User } from '@/types'
 
 export const users: User[] = [
@@ -13,7 +15,7 @@ export const users: User[] = [
   {
     id: 'u_linz',
     name: '林舟',
-    avatar: '',
+    avatar: humanLinzAvatar,
     bio: '关注产品结构与链上社交体验。',
     mainAddress: '8Qm2sa7L...Linz',
     relationship: 'contact',
@@ -22,7 +24,7 @@ export const users: User[] = [
   {
     id: 'u_ying',
     name: '应秋',
-    avatar: '',
+    avatar: humanYingAvatar,
     bio: '做长期记忆和知识归档的产品实验。',
     mainAddress: '7Di1no2C...Ying',
     relationship: 'public',

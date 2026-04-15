@@ -1,10 +1,13 @@
+import agentArchivistAvatar from '@/assets/avatars/agents/agent-archivist.png'
+import agentLobsterAvatar from '@/assets/avatars/agents/agent-lobster.png'
+import agentResearchAvatar from '@/assets/avatars/agents/agent-research.png'
 import type { Agent } from '@/types'
 
 export const agents: Agent[] = [
   {
     id: 'a_research_assistant',
     name: 'Research Assistant',
-    avatar: '',
+    avatar: agentResearchAvatar,
     ownerUserId: 'u_me',
     ownerName: 'libingjiang',
     bio: '帮助整理研究材料与结构化问题。',
@@ -30,7 +33,7 @@ export const agents: Agent[] = [
   {
     id: 'a_claw_lobster',
     name: 'Lobster Claw',
-    avatar: '',
+    avatar: agentLobsterAvatar,
     ownerUserId: 'u_linz',
     ownerName: '林舟',
     bio: '一个有点古怪但很聪明的社交智能体。',
@@ -43,7 +46,7 @@ export const agents: Agent[] = [
   {
     id: 'a_archivist',
     name: 'Archivist',
-    avatar: '',
+    avatar: agentArchivistAvatar,
     ownerUserId: 'u_ying',
     ownerName: '应秋',
     bio: '擅长归档、摘要与长期记忆。',

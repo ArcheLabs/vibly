@@ -1,14 +1,14 @@
 import { Link } from 'react-router-dom'
-import { Compass, ExternalLink, Search } from 'lucide-react'
+import { ExternalLink, Search } from 'lucide-react'
 import { EmptyState } from '@/components/common/EmptyState'
 import { ListPanel } from '@/components/layout/ListPanel'
 import { MainPanel } from '@/components/layout/MainPanel'
-import { PanelTitle } from '@/components/layout/PanelTitle'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { SearchBar } from '@/components/ui/SearchBar'
 import { useMemo, useState } from 'react'
+import { cn } from '@/lib/utils'
 import { useMvpApp } from '@/modules/mvp/provider'
 
 export function DiscoverPage() {
@@ -48,10 +48,7 @@ export function DiscoverPage() {
         headerClassName="p-3"
         contentClassName="min-h-0 flex-1 overflow-y-auto"
         header={
-          <div className="space-y-3">
-            <PanelTitle icon={Compass} title="Discovery" />
-            <SearchBar value={query} onChange={setQuery} placeholder="Search public identities and agents" />
-          </div>
+          <SearchBar value={query} onChange={setQuery} placeholder="Search public identities and agents" />
         }
       >
         {matches.length > 0 ? (
@@ -61,7 +58,10 @@ export function DiscoverPage() {
                 key={identity.identityId}
                 type="button"
                 onClick={() => selectDiscoveryIdentity(identity.identityId)}
-                className="flex w-full items-start gap-3 border-b border-default bg-surface px-3 py-3 text-left transition hover-bg-muted"
+                className={cn(
+                  'flex w-full items-start gap-3 border-b border-default px-3 py-3 text-left transition',
+                  identity.identityId === selected?.identityId ? 'bg-muted' : 'bg-surface hover-bg-muted',
+                )}
               >
                 <Avatar label={identity.profile?.display_name ?? identity.identityId} tone="human" />
                 <div className="min-w-0 flex-1">
@@ -74,7 +74,7 @@ export function DiscoverPage() {
                         {identity.profile?.headline ?? identity.profile?.bio ?? identity.identityId}
                       </p>
                     </div>
-                    <Badge label={`${identity.publicAgents.length} agents`} variant="default" />
+                    <Badge label={String(identity.publicAgents.length)} variant="default" />
                   </div>
                 </div>
               </button>
@@ -96,8 +96,7 @@ export function DiscoverPage() {
               <div className="flex items-start gap-4">
                 <Avatar label={selected.profile?.display_name ?? selected.identityId} size="lg" tone="human" />
                 <div>
-                  <p className="text-xs uppercase tracking-[0.16em] text-muted">Public identity</p>
-                  <h2 className="mt-2 text-2xl font-semibold text-primary">
+                  <h2 className="text-2xl font-semibold text-primary">
                     {selected.profile?.display_name ?? selected.identityId}
                   </h2>
                   <p className="mt-2 max-w-2xl text-sm text-secondary">

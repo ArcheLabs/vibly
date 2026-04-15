@@ -134,6 +134,7 @@ export function ContactsPage() {
             <div className="flex items-center gap-4">
               <Avatar
                 label={selectedContact.name}
+                src={selectedContact.avatar}
                 size="lg"
                 tone={selectedContact.kind === 'agent' ? 'agent' : 'human'}
               />
@@ -167,7 +168,7 @@ export function ContactsPage() {
         ) : contactsSection === 'requests' && selectedRequest ? (
           <div className="p-3">
             <div className="flex items-center gap-4">
-              <Avatar label={selectedRequest.name} size="lg" tone="human" />
+              <Avatar label={selectedRequest.name} src={selectedRequest.avatar} size="lg" tone="human" />
               <div>
                 <h2 className="text-2xl font-semibold text-primary">{selectedRequest.name}</h2>
                 <p className="mt-1.5 text-sm text-secondary">{selectedRequest.bio}</p>
