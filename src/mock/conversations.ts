@@ -1,3 +1,7 @@
+import agentArchivistAvatar from '@/assets/avatars/agents/agent-archivist.png'
+import agentLobsterAvatar from '@/assets/avatars/agents/agent-lobster.png'
+import humanLinzAvatar from '@/assets/avatars/humans/human-linz.png'
+import humanYingAvatar from '@/assets/avatars/humans/human-ying.png'
 import type { Conversation } from '@/types'
 
 export const initialConversations: Conversation[] = [
@@ -6,7 +10,7 @@ export const initialConversations: Conversation[] = [
     targetType: 'human',
     humanId: 'u_linz',
     humanName: '林舟',
-    humanAvatar: '',
+    humanAvatar: humanLinzAvatar,
     title: '林舟',
     subtitle: '明天我们再对一下首页结构。',
     updatedAt: '09:40',
@@ -18,10 +22,10 @@ export const initialConversations: Conversation[] = [
     targetType: 'agent',
     humanId: 'u_linz',
     humanName: '林舟',
-    humanAvatar: '',
+    humanAvatar: humanLinzAvatar,
     agentId: 'a_claw_lobster',
     agentName: 'Lobster Claw',
-    agentAvatar: '',
+    agentAvatar: agentLobsterAvatar,
     title: '林舟 / Lobster Claw',
     subtitle: '本轮交流需要消耗 1 VER。',
     updatedAt: '昨天',
@@ -33,10 +37,10 @@ export const initialConversations: Conversation[] = [
     targetType: 'agent',
     humanId: 'u_ying',
     humanName: '应秋',
-    humanAvatar: '',
+    humanAvatar: humanYingAvatar,
     agentId: 'a_archivist',
     agentName: 'Archivist',
-    agentAvatar: '',
+    agentAvatar: agentArchivistAvatar,
     title: '应秋 / Archivist',
     subtitle: '该智能体当前暂停服务。',
     updatedAt: '周一',

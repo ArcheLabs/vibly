@@ -23,6 +23,7 @@ import type {
   AppPage,
   ContactsSection,
   Conversation,
+  ConversationFilter,
   DiscoverSection,
   MeSection,
   Message,
@@ -45,6 +46,13 @@ function moveConversationToFront(items: Conversation[], conversationId: string) 
   return [target, ...items.filter((item) => item.id !== conversationId)]
 }
 
+const conversationFilterOrder: ConversationFilter[] = ['human', 'agent', 'all']
+
+function getNextConversationFilter(filter: ConversationFilter): ConversationFilter {
+  const currentIndex = conversationFilterOrder.indexOf(filter)
+  return conversationFilterOrder[(currentIndex + 1) % conversationFilterOrder.length] ?? 'human'
+}
+
 export default function App() {
   const { locale, t } = useI18n()
   const location = useLocation()
@@ -53,6 +61,7 @@ export default function App() {
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(
     initialConversations[0]?.id ?? null,
   )
+  const [chatConversationFilter, setChatConversationFilter] = useState<ConversationFilter>('all')
   const [conversationMessages, setConversationMessages] = useState<Record<string, Message[]>>(
     initialMessagesByConversation,
   )
@@ -197,6 +206,29 @@ export default function App() {
     )
   }
 
+  function createConversationSession(conversationId: string) {
+    const sourceConversation = conversations.find((conversation) => conversation.id === conversationId)
+    if (!sourceConversation) return
+
+    const nextConversation: Conversation = {
+      ...sourceConversation,
+      id: makeId('c_session'),
+      subtitle: t('chat.noMessages'),
+      updatedAt: formatTimeByLocale(new Date(), locale),
+      unreadCount: 0,
+      state: 'empty',
+    }
+
+    setConversations((items) => [nextConversation, ...items])
+    setConversationMessages((items) => ({ ...items, [nextConversation.id]: [] }))
+    setConversationIdentityMap((items) => ({
+      ...items,
+      [nextConversation.id]: currentUser.defaultIdentityId,
+    }))
+    setSelectedConversationId(nextConversation.id)
+    navigate('/chat')
+  }
+
   function sendMessage(conversationId: string, text: string) {
     const content = text.trim()
     if (!content) return
@@ -230,7 +262,7 @@ export default function App() {
                 subtitle: content,
                 updatedAt: sentAt,
                 unreadCount: 0,
-                state: 'normal',
+                state: conversation.state === 'empty' ? 'normal' : conversation.state,
               }
             : conversation,
         ),
@@ -243,6 +275,7 @@ export default function App() {
     currentPage,
     conversations,
     selectedConversationId,
+    chatConversationFilter,
     conversationMessages,
     conversationIdentityMap,
     identities,
@@ -264,6 +297,10 @@ export default function App() {
     meSection,
     overlay,
     selectConversation,
+    setChatConversationFilter,
+    cycleChatConversationFilter: () =>
+      setChatConversationFilter((filter) => getNextConversationFilter(filter)),
+    createConversationSession,
     switchIdentity,
     sendMessage,
     openUserProfile: (userId) => setOverlay({ type: 'user', id: userId }),

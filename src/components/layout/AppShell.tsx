@@ -6,10 +6,12 @@ import { ProfilePanel } from '@/components/profile/ProfilePanel'
 import { UserCard } from '@/components/profile/UserCard'
 import { LayoutOverlayContext } from '@/components/layout/LayoutOverlayContext'
 import { SideNav } from '@/components/layout/SideNav'
+import { GlobalBannerStack } from '@/components/system/GlobalBannerStack'
 import { IconButton } from '@/components/ui/IconButton'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { useI18n } from '@/i18n'
 import { useAppContext } from '@/lib/app-context'
+import { useMvpApp } from '@/modules/mvp/provider'
 import type { AppPage } from '@/types'
 
 const pathToPageMap: Record<string, AppPage> = {
@@ -27,8 +29,27 @@ export function AppShell() {
   const location = useLocation()
   const isDesktop = useMediaQuery('(min-width: 1024px)')
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false)
-  const { overlay, closeOverlay, users, agents, startChatWithAgent, startChatWithUser } =
+  const {
+    overlay,
+    closeOverlay,
+    users,
+    agents,
+    startChatWithAgent,
+    startChatWithUser,
+    cycleChatConversationFilter,
+  } =
     useAppContext()
+  const {
+    banners,
+    localPrivateState,
+    uiState,
+    unreadNotificationCount,
+    toggleNotificationCenter,
+    markNotificationAsRead,
+    markAllNotificationsAsRead,
+    dismissNotification,
+    dismissBanner,
+  } = useMvpApp()
 
   const currentPage = pathToPageMap[location.pathname] ?? 'chat'
   const overlayUser = overlay?.type === 'user' ? users.find((user) => user.id === overlay.id) : null
@@ -54,11 +75,35 @@ export function AppShell() {
     [isDesktop, mobilePanelOpen],
   )
 
+  const handleSideNavSelect = (page: AppPage, isActive: boolean) => {
+    if (page === 'chat' && isActive) {
+      cycleChatConversationFilter()
+      return
+    }
+    navigate(`/${page}`)
+  }
+
   return (
     <LayoutOverlayContext.Provider value={layoutOverlayValue}>
       <div className="relative flex min-h-screen bg-app text-primary">
+        <GlobalBannerStack banners={banners} onDismiss={dismissBanner} />
+        {isDesktop ? (
+          <div className="fixed inset-y-0 left-0 z-40 hidden lg:block">
+            <SideNav
+              activePage={currentPage}
+              onSelect={handleSideNavSelect}
+              notifications={localPrivateState.notifications}
+              unreadNotificationCount={unreadNotificationCount}
+              notificationCenterOpen={uiState.notificationCenterOpen}
+              onToggleNotificationCenter={toggleNotificationCenter}
+              onMarkNotificationRead={markNotificationAsRead}
+              onMarkAllNotificationsRead={markAllNotificationsAsRead}
+              onDismissNotification={dismissNotification}
+            />
+          </div>
+        ) : null}
         <div className="relative flex min-h-screen w-full overflow-hidden border border-default bg-panel">
-          {isDesktop ? <SideNav activePage={currentPage} onSelect={(page) => navigate(`/${page}`)} /> : null}
+          {isDesktop ? <div className="hidden w-[76px] shrink-0 lg:block" aria-hidden="true" /> : null}
           {!isDesktop ? (
             <div className="absolute left-3 top-3 z-50 flex items-center gap-2">
               <IconButton onClick={layoutOverlayValue.togglePanel} aria-label={t('actions.togglePanel')}>
@@ -77,8 +122,15 @@ export function AppShell() {
               <div className="absolute inset-y-0 left-0 z-30">
                 <SideNav
                   activePage={currentPage}
-                  onSelect={(page) => {
-                    navigate(`/${page}`)
+                  notifications={localPrivateState.notifications}
+                  unreadNotificationCount={unreadNotificationCount}
+                  notificationCenterOpen={uiState.notificationCenterOpen}
+                  onToggleNotificationCenter={toggleNotificationCenter}
+                  onMarkNotificationRead={markNotificationAsRead}
+                  onMarkAllNotificationsRead={markAllNotificationsAsRead}
+                  onDismissNotification={dismissNotification}
+                  onSelect={(page, isActive) => {
+                    handleSideNavSelect(page, isActive)
                     layoutOverlayValue.closePanel()
                   }}
                 />

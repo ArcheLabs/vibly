@@ -1,4 +1,4 @@
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, FileText } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { IconButton } from '@/components/ui/IconButton'
@@ -13,7 +13,9 @@ type ChatHeaderProps = {
   conversation: Conversation
   targetView: HeaderTarget
   targetMenuOpen: boolean
+  sessionDrawerOpen: boolean
   onTargetMenuOpenChange: (open: boolean) => void
+  onSessionDrawerOpenChange: (open: boolean) => void
   onTargetViewChange: (target: HeaderTarget) => void
   onOpenTargetProfile: () => void
 }
@@ -22,7 +24,9 @@ export function ChatHeader({
   conversation,
   targetView,
   targetMenuOpen,
+  sessionDrawerOpen,
   onTargetMenuOpenChange,
+  onSessionDrawerOpenChange,
   onTargetViewChange,
   onOpenTargetProfile,
 }: ChatHeaderProps) {
@@ -39,6 +43,7 @@ export function ChatHeader({
       <div className="flex min-w-0 items-center gap-3">
         <Avatar
           label={title ?? conversation.humanName}
+          src={isViewingAgent ? conversation.agentAvatar : conversation.humanAvatar}
           tone={isViewingAgent ? 'agent' : 'human'}
           onClick={onOpenTargetProfile}
         />
@@ -55,38 +60,54 @@ export function ChatHeader({
           <p className="truncate text-xs text-muted">{description}</p>
         </div>
       </div>
-      <div className="relative">
-        <IconButton onClick={() => onTargetMenuOpenChange(!targetMenuOpen)} aria-label={t('actions.switchTarget')}>
-          <ChevronDown className="h-4 w-4" />
-        </IconButton>
-        {targetMenuOpen ? (
-          <div className="absolute right-0 top-[calc(100%+8px)] z-20 min-w-[164px] rounded-2xl border border-default bg-surface p-1.5">
-            <button
-              type="button"
-              onClick={() => onTargetViewChange('human')}
-              className={cn(
-                'flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm',
-                targetView === 'human' ? 'bg-muted text-primary' : 'text-secondary hover-bg-muted',
-              )}
-            >
-              <Avatar label={conversation.humanName} size="sm" tone="human" />
-              <span className="truncate">{conversation.humanName}</span>
-            </button>
-            {hasAgentTarget ? (
+      <div className="flex items-center gap-2">
+        {hasAgentTarget ? (
+          <IconButton
+            active={sessionDrawerOpen}
+            onClick={() => onSessionDrawerOpenChange(!sessionDrawerOpen)}
+            aria-label={t('actions.openConversationList')}
+          >
+            <FileText className="h-4 w-4" />
+          </IconButton>
+        ) : null}
+        <div className="relative">
+          <IconButton onClick={() => onTargetMenuOpenChange(!targetMenuOpen)} aria-label={t('actions.switchTarget')}>
+            <ChevronDown className="h-4 w-4" />
+          </IconButton>
+          {targetMenuOpen ? (
+            <div className="absolute right-0 top-[calc(100%+8px)] z-20 min-w-[164px] rounded-2xl border border-default bg-surface p-1.5">
               <button
                 type="button"
-                onClick={() => onTargetViewChange('agent')}
+                onClick={() => onTargetViewChange('human')}
                 className={cn(
-                  'mt-1 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm',
-                  targetView === 'agent' ? 'bg-muted text-primary' : 'text-secondary hover-bg-muted',
+                  'flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm',
+                  targetView === 'human' ? 'bg-muted text-primary' : 'text-secondary hover-bg-muted',
                 )}
               >
-                <Avatar label={conversation.agentName ?? t('chat.targetAgentFallback')} size="sm" tone="agent" />
-                <span className="truncate">{conversation.agentName}</span>
+                <Avatar label={conversation.humanName} src={conversation.humanAvatar} size="sm" tone="human" />
+                <span className="truncate">{conversation.humanName}</span>
               </button>
-            ) : null}
-          </div>
-        ) : null}
+              {hasAgentTarget ? (
+                <button
+                  type="button"
+                  onClick={() => onTargetViewChange('agent')}
+                  className={cn(
+                    'mt-1 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm',
+                    targetView === 'agent' ? 'bg-muted text-primary' : 'text-secondary hover-bg-muted',
+                  )}
+                >
+                  <Avatar
+                    label={conversation.agentName ?? t('chat.targetAgentFallback')}
+                    src={conversation.agentAvatar}
+                    size="sm"
+                    tone="agent"
+                  />
+                  <span className="truncate">{conversation.agentName}</span>
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
       </div>
     </div>
   )

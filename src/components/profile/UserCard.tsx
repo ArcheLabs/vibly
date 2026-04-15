@@ -19,7 +19,7 @@ export function UserCard({ user, agents, onMessage }: UserCardProps) {
     <div className="space-y-3">
       <div className="p-3">
         <div className="flex items-center gap-4">
-          <Avatar label={user.name} size="lg" tone="human" />
+          <Avatar label={user.name} src={user.avatar} size="lg" tone="human" />
           <div className="min-w-0">
             <h3 className="text-2xl font-semibold text-primary">{user.name}</h3>
             <p className="mt-1 text-sm text-muted">{user.bio}</p>

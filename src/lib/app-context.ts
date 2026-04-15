@@ -5,6 +5,7 @@ import type {
   Contact,
   ContactsSection,
   Conversation,
+  ConversationFilter,
   DiscoverSection,
   Identity,
   MeSection,
@@ -20,6 +21,7 @@ export type AppStateContextValue = {
   currentPage: AppPage
   conversations: Conversation[]
   selectedConversationId: string | null
+  chatConversationFilter: ConversationFilter
   conversationMessages: Record<string, Message[]>
   conversationIdentityMap: Record<string, string>
   identities: Identity[]
@@ -41,6 +43,9 @@ export type AppStateContextValue = {
   meSection: MeSection
   overlay: ProfileOverlay
   selectConversation: (conversationId: string | null) => void
+  setChatConversationFilter: (filter: ConversationFilter) => void
+  cycleChatConversationFilter: () => void
+  createConversationSession: (conversationId: string) => void
   switchIdentity: (conversationId: string, identityId: string) => void
   sendMessage: (conversationId: string, text: string) => void
   openUserProfile: (userId: string) => void

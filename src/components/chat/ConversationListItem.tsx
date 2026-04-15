@@ -14,6 +14,7 @@ export function ConversationListItem({ item, active, onClick }: ConversationList
   const { locale } = useI18n()
   const title = item.agentName ?? item.humanName
   const subtitle = item.agentName ? item.humanName : item.subtitle
+  const showAgentAvatar = Boolean(item.agentName)
 
   return (
     <SidebarItem
@@ -25,10 +26,15 @@ export function ConversationListItem({ item, active, onClick }: ConversationList
       onClick={onClick}
       leading={
         <div className="relative h-10 w-10 shrink-0">
-          <Avatar label={item.humanName} size="md" tone="human" />
-          {item.agentName ? (
-            <div className="absolute -bottom-1 -right-1">
-              <Avatar label={item.agentName} size="sm" tone="agent" />
+          <Avatar
+            label={showAgentAvatar ? item.agentName ?? item.humanName : item.humanName}
+            src={showAgentAvatar ? item.agentAvatar : item.humanAvatar}
+            size="md"
+            tone={showAgentAvatar ? 'agent' : 'human'}
+          />
+          {showAgentAvatar ? (
+            <div className="absolute bottom-0 right-0 shadow-sm">
+              <Avatar label={item.humanName} src={item.humanAvatar} size="xs" tone="human" />
             </div>
           ) : null}
         </div>

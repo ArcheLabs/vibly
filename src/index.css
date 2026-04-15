@@ -23,3 +23,80 @@ textarea {
   background: color-mix(in srgb, var(--text-muted) 40%, transparent);
   background-clip: content-box;
 }
+
+[data-ahip-item-kind] {
+  display: grid;
+  gap: 12px;
+}
+
+[data-ahip-section] {
+  display: grid;
+  gap: 8px;
+}
+
+[data-ahip-section='actions'] {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+[data-ahip-section='actions'] button {
+  min-height: 34px;
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+[data-ahip-section='actions'] button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+[data-ahip-block],
+[data-ahip-section='approvals'] section,
+[data-ahip-section='tool_intents'] section,
+[data-ahip-section='artifacts'] section,
+[data-ahip-section='state_patches'] section {
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  background: var(--bg-surface);
+  padding: 12px;
+}
+
+[data-ahip-block='markdown'] pre,
+[data-ahip-block='code'] pre,
+[data-ahip-fallback] pre {
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+[data-ahip-block='table'] table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+[data-ahip-block='table'] th,
+[data-ahip-block='table'] td {
+  border-bottom: 1px solid var(--border-default);
+  padding: 8px;
+  text-align: left;
+}
+
+[data-ahip-block='form'] form,
+[data-ahip-block='form'] label {
+  display: grid;
+  gap: 8px;
+}
+
+[data-ahip-block='form'] input,
+[data-ahip-block='form'] textarea,
+[data-ahip-block='form'] select {
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  background: var(--bg-muted);
+  color: var(--text-primary);
+  padding: 8px;
+}
