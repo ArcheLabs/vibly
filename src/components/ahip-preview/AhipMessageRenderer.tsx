@@ -87,7 +87,9 @@ function createAppletRegistry(): AHIPAppletRegistry {
   return {
     resolveWidgetRenderer(widget) {
       if (widget.widget_type === 'dev.vibly/gomoku_board') return gomokuRenderer
-      if (hasDynamicApplet(widget.widget_type)) return DynamicAppletRenderer
+      if (widget.widget_type.startsWith('dev.vibly/dynamic_') || hasDynamicApplet(widget.widget_type)) {
+        return DynamicAppletRenderer
+      }
       return undefined
     },
   }

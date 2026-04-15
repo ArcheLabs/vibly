@@ -73,6 +73,19 @@ export interface AhipArtifactOpenEvent {
   openedAt: string
 }
 
+export interface AhipDynamicAppletEntry {
+  widgetType: string
+  displayName: string
+  htmlSource: string
+  registeredAt: string
+}
+
+export interface AhipPreviewMessageMetadata {
+  source?: 'widget_action'
+  widgetId?: string
+  interactionId?: string
+}
+
 export type AhipPreviewMessage =
   | {
       messageId: string
@@ -81,6 +94,7 @@ export type AhipPreviewMessage =
       kind: 'text'
       text: string
       createdAt: string
+      metadata?: AhipPreviewMessageMetadata
     }
   | {
       messageId: string
@@ -89,6 +103,7 @@ export type AhipPreviewMessage =
       kind: 'ahip'
       item: AHIPItem
       createdAt: string
+      metadata?: AhipPreviewMessageMetadata
     }
 
 export interface AhipPreviewState {
@@ -143,6 +158,7 @@ export interface AhipPreviewExport {
   runtimeTraces: Record<string, AhipRuntimeTrace[]>
   providerTests: Record<string, AhipProviderTest>
   artifactOpenEvents: Record<string, AhipArtifactOpenEvent[]>
+  dynamicApplets: AhipDynamicAppletEntry[]
 }
 
 export type AhipModelDecision =

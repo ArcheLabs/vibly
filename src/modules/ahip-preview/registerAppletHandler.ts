@@ -9,7 +9,7 @@ const APPLET_GEN_TIMEOUT_MS = 3 * 60_000
 const APPLET_MAX_OUTPUT_TOKENS = 8192
 
 function buildAppletGenerationPrompt(intent: ToolIntent) {
-  const appletName = intent.proposed_args?.requested_applet ?? intent.title ?? 'Applet'
+  const appletName = resolveAppletName(intent)
   const stateSchema = intent.proposed_args?.state_schema
     ? JSON.stringify(intent.proposed_args.state_schema, null, 2)
     : null
@@ -179,7 +179,7 @@ export async function executeRegisterApplet(
 
     const html = sanitizeAppletHtml(extractHtmlDocument(fullText))
 
-    registerDynamicApplet({
+    await registerDynamicApplet({
       widgetType,
       displayName: appletName,
       htmlSource: html,

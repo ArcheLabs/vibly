@@ -6,6 +6,7 @@ import type {
   PublicProfileV1,
 } from '@/modules/content/schemas'
 import type { PersistedMvpState } from '@/modules/mvp/types'
+import type { PublicProfileDraft } from '@/modules/profile/types'
 
 function createContentEnvelope<T>(
   ref: string,
@@ -128,6 +129,21 @@ const defaultLocalAgent: AgentRecord = {
   lastPublishedAt: null,
 }
 
+function createDefaultProfileDraft(): PublicProfileDraft {
+  const suffix = Math.random().toString(36).slice(2, 8) || 'local'
+  const username = `vibly_${suffix}`
+
+  return {
+    version: 1,
+    displayName: `Vibly User ${suffix.toUpperCase()}`,
+    username,
+    bio: '',
+    headline: 'New Vibly profile',
+    links: [],
+    defaultContactPolicy: 'open' as const,
+  }
+}
+
 export function createDefaultMvpState(): PersistedMvpState {
   return {
     chainState: {
@@ -163,15 +179,7 @@ export function createDefaultMvpState(): PersistedMvpState {
         activeAccountId: null,
         status: 'idle',
       },
-      profileDraft: {
-        version: 1,
-        displayName: 'libingjiang',
-        username: 'libingjiang',
-        bio: 'Building the Vibly localnet MVP with public profile + local-private agent split.',
-        headline: 'Codex-driven MVP implementation',
-        links: [{ type: 'github', value: 'https://github.com/libingjiang' }],
-        defaultContactPolicy: 'paid',
-      },
+      profileDraft: createDefaultProfileDraft(),
       profilePublishState: 'draft',
       profileLastPublishedAt: null,
       agentsLocal: [defaultLocalAgent],

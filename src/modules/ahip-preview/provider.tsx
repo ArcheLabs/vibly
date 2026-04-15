@@ -36,6 +36,7 @@ import { testProviderDecision } from './providerAdapters'
 import { executeToolIntent } from './toolIntentExecution'
 import { hasToolHandler } from './toolExecutor'
 import { dispatchWidgetAction } from './widgetActionBus'
+import { clearDynamicApplets, hydrateDynamicAppletsFromDb } from './dynamicAppletRegistry'
 import type {
   AhipArtifactOpenEvent,
   AhipPreviewExport,
@@ -180,6 +181,7 @@ export function AhipPreviewProvider({ children }: { children: ReactNode }) {
 
       try {
         await initAhipPreviewDb()
+        await hydrateDynamicAppletsFromDb()
         const [snapshot, loadedSecrets] = await Promise.all([
           loadAhipPreviewSnapshot(),
           loadSecrets(),
@@ -495,6 +497,7 @@ export function AhipPreviewProvider({ children }: { children: ReactNode }) {
           // forward the action to the LLM as a continuation prompt so it can reply.
           if (action.payload?.requires_llm_response === true) {
             const widgetId = action.payload.widget_id as string
+            const interactionId = makePreviewId('widget_interaction')
             const moveDescription =
               typeof action.payload.description === 'string'
                 ? action.payload.description
@@ -517,6 +520,11 @@ export function AhipPreviewProvider({ children }: { children: ReactNode }) {
               kind: 'text',
               text: moveDescription,
               createdAt: nowIso(),
+              metadata: {
+                source: 'widget_action',
+                widgetId,
+                interactionId,
+              },
             }
 
             appendMessage(userMessage)
@@ -544,7 +552,14 @@ export function AhipPreviewProvider({ children }: { children: ReactNode }) {
                 onPipelineEvent: handlePipelineEvent,
               })
               if (abortController.signal.aborted) return
-              appendMessage(result.message)
+              appendMessage({
+                ...result.message,
+                metadata: {
+                  source: 'widget_action',
+                  widgetId,
+                  interactionId,
+                },
+              })
               appendRuntimeTrace(result.trace)
 
               // Forward any invoke_widget_action from LLM response back to the widget
@@ -848,6 +863,7 @@ export function AhipPreviewProvider({ children }: { children: ReactNode }) {
         activeAbortControllerRef.current = null
         clearSoftTimeout()
         const nextState = await resetAhipPreviewDb()
+        clearDynamicApplets()
         setState(nextState)
         setSecrets({ apiKeysByAgentId: {} })
       },

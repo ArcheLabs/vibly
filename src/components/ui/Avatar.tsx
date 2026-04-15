@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { UserRound } from 'lucide-react'
+import defaultAgentAvatar from '@/assets/avatars/agents/agent-lobster.png'
 import { cn } from '@/lib/utils'
 
 type AvatarProps = {
@@ -31,21 +32,22 @@ const shapeClassMap = {
 
 export function Avatar({ label, size = 'md', tone = 'neutral', src, onClick }: AvatarProps) {
   const [imageFailed, setImageFailed] = useState(false)
+  const imageSrc = src || (tone === 'agent' ? defaultAgentAvatar : undefined)
   const initials = label
     .split(/\s+/)
     .map((part) => part[0])
     .join('')
     .slice(0, 2)
     .toUpperCase()
-  const showImage = Boolean(src) && !imageFailed
+  const showImage = Boolean(imageSrc) && !imageFailed
 
   useEffect(() => {
     setImageFailed(false)
-  }, [src])
+  }, [imageSrc])
 
   const avatarContent = showImage ? (
     <img
-      src={src}
+      src={imageSrc}
       alt={label}
       onError={() => setImageFailed(true)}
       className={cn('h-full w-full object-cover', shapeClassMap[tone])}

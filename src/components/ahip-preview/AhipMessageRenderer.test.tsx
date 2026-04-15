@@ -65,4 +65,53 @@ describe('AhipMessageRenderer', () => {
     expect(screen.getByText('Fallback: this custom block is not registered by the host.')).toBeInTheDocument()
     expect(screen.getByText('Fallback: this widget type is not registered by the host.')).toBeInTheDocument()
   })
+
+  it('shows an explicit fallback when a dynamic applet renderer is missing locally', () => {
+    render(
+      <AhipMessageRenderer
+        message={{
+          messageId: 'msg_missing_dynamic_applet',
+          sessionId: 'session_renderer_test',
+          role: 'assistant',
+          kind: 'ahip',
+          createdAt: new Date(0).toISOString(),
+          item: assertValidAHIPItem({
+            protocol: 'ahip',
+            version: '0.2',
+            item_id: 'item_missing_dynamic_applet',
+            kind: 'turn',
+            actor: {
+              actor_id: 'host',
+              actor_kind: 'system',
+              display_name: 'Host',
+            },
+            created_at: new Date(0).toISOString(),
+            fallback_text: 'Chess applet fallback',
+            content: [
+              {
+                id: 'block_missing_dynamic_applet',
+                type: 'status',
+                status: 'idle',
+                message: 'Chess ready',
+              },
+            ],
+            widgets: [
+              {
+                id: 'widget_missing_dynamic_applet_ref',
+                widget_id: 'missing_dynamic_chess_widget',
+                widget_type: 'dev.vibly/dynamic_missing_chess',
+                props: {},
+                permissions: { network: 'none', clipboard: false, wallet: false, storage: 'session' },
+                fallback_text: 'Chess widget fallback',
+              },
+            ],
+          }),
+        }}
+        onAction={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText('Applet renderer is not available locally. Regenerate applet.')).toBeInTheDocument()
+    expect(screen.getByText('Chess widget fallback')).toBeInTheDocument()
+  })
 })

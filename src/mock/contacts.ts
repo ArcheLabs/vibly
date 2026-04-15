@@ -7,17 +7,17 @@ export const initialContacts: Contact[] = [
   {
     id: 'u_linz',
     kind: 'human',
-    name: '林舟',
+    name: 'Linz',
     avatar: humanLinzAvatar,
-    bio: '关注产品结构与链上社交体验。',
+    bio: 'Explores product structure and social protocol UX.',
   },
   {
     id: 'a_claw_lobster',
     kind: 'agent',
     name: 'Lobster Claw',
     avatar: agentLobsterAvatar,
-    bio: '一个有趣的社交智能体。',
-    ownerName: '林舟',
+    bio: 'A playful social agent for lightweight conversations.',
+    ownerName: 'Linz',
   },
 ]
 
@@ -27,8 +27,8 @@ export const initialContactRequests: Contact[] = [
     kind: 'request',
     name: 'Nova',
     avatar: humanNovaAvatar,
-    bio: '希望添加你为联系人。',
-    requestNote: '想体验一下你的链上研究智能体。',
+    bio: 'Wants to add you as a contact.',
+    requestNote: 'Interested in trying your on-chain research agent.',
     status: 'pending',
   },
 ]

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronDown, FileText, Plus, RotateCcw, Send, ShieldCheck } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { ChevronsDownUp, ChevronsUpDown, FileText, Menu, Plus, RotateCcw, Send, ShieldCheck } from 'lucide-react'
 import { AhipMessageRenderer } from '@/components/ahip-preview/AhipMessageRenderer'
+import { AgentListItem } from '@/components/agents/AgentListItem'
 import { EmptyState } from '@/components/common/EmptyState'
 import { useLayoutOverlay } from '@/components/layout/LayoutOverlayContext'
 import { ListPanel } from '@/components/layout/ListPanel'
@@ -10,14 +10,91 @@ import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { IconButton } from '@/components/ui/IconButton'
+import { SearchBar } from '@/components/ui/SearchBar'
 import { cn } from '@/lib/utils'
 import { AHIP_PREVIEW_CAPABILITIES } from '@/modules/ahip-preview/capabilities'
 import { AHIP_PROTOCOL_SCENARIOS } from '@/modules/ahip-preview/scenarioMatrix'
 import { getAhipSkillManifest } from '@/modules/ahip-preview/skillManifest'
+import { toPreviewAgentListItem } from '@/modules/ahip-preview/agentListAdapter'
 import { useAhipPreview } from '@/modules/ahip-preview/provider'
+import type { AhipPreviewMessage } from '@/modules/ahip-preview/types'
 
-function engineLabel(hasApiKey: boolean) {
-  return hasApiKey ? 'LangGraph' : 'Local demo'
+function getLoadingPhaseLabel(phase?: string) {
+  if (!phase) return 'Host'
+  if (phase.includes('provider')) return 'Model'
+  if (phase.includes('validating') || phase.includes('repairing') || phase.includes('parsing')) return 'Validation'
+  if (phase.includes('tool')) return 'Tool'
+  if (phase.includes('applet')) return 'Applet'
+  return 'Host'
+}
+
+function getLoadingProgressText(label?: string, detail?: string) {
+  const chunkMatch = label?.match(/(\d+)\s+chunks?\s+received/i)
+  if (!chunkMatch && !detail) return null
+  return [chunkMatch ? `${chunkMatch[1]} chunks received` : null, detail].filter(Boolean).join(' · ')
+}
+
+type MessageRenderGroup =
+  | { kind: 'message'; message: AhipPreviewMessage }
+  | { kind: 'widget_interactions'; key: string; messages: AhipPreviewMessage[]; interactionCount: number }
+
+function isWidgetActionMessage(message: AhipPreviewMessage) {
+  if (message.metadata?.source === 'widget_action') return true
+
+  if (message.kind === 'text') {
+    return /widget action|^(player|user)\s+(moved|move)|^move:/i.test(message.text.trim())
+  }
+
+  return Boolean(
+    !message.item.widgets?.length &&
+      message.item.actions?.some(
+        (action) => action.kind === 'invoke_widget_action' && typeof action.payload?.widget_id === 'string',
+      ),
+  )
+}
+
+function groupMessagesForRender(messages: AhipPreviewMessage[]): MessageRenderGroup[] {
+  const groups: MessageRenderGroup[] = []
+  let pending: AhipPreviewMessage[] = []
+
+  const flushPending = () => {
+    if (!pending.length) return
+    const interactionIds = new Set(pending.map((message) => message.metadata?.interactionId ?? message.messageId))
+    groups.push({
+      kind: 'widget_interactions',
+      key: pending[0].messageId,
+      messages: pending,
+      interactionCount: pending.some((message) => message.metadata?.interactionId)
+        ? interactionIds.size
+        : Math.max(1, Math.ceil(pending.length / 2)),
+    })
+    pending = []
+  }
+
+  for (const message of messages) {
+    if (isWidgetActionMessage(message)) {
+      pending.push(message)
+      continue
+    }
+
+    flushPending()
+    groups.push({ kind: 'message', message })
+  }
+
+  flushPending()
+  return groups
+}
+
+function getAhipSummary(message: AhipPreviewMessage) {
+  if (message.kind !== 'ahip') return ''
+  const titleBlock = message.item.content?.find((block) => {
+    if (!('title' in block) || typeof block.title !== 'string') return false
+    return block.title.trim().length > 0
+  })
+  const title = titleBlock && 'title' in titleBlock && typeof titleBlock.title === 'string'
+    ? titleBlock.title
+    : message.item.fallback_text
+  return `${title} · ${message.item.kind}`
 }
 
 export function ChatPage() {
@@ -29,7 +106,6 @@ export function ChatPage() {
     selectedMessages,
     selectedTraces,
     selectedArtifactEvents,
-    selectedProviderTest,
     secrets,
     hydrating,
     hydrationError,
@@ -48,10 +124,15 @@ export function ChatPage() {
     exportPreviewData,
     resetPreview,
   } = useAhipPreview()
-  const navigate = useNavigate()
   const { closePanel } = useLayoutOverlay()
   const [draft, setDraft] = useState('')
+  const [agentSearch, setAgentSearch] = useState('')
   const [sessionDropdownOpen, setSessionDropdownOpen] = useState(false)
+  const [previewDropdownOpen, setPreviewDropdownOpen] = useState(false)
+  const [actionMenuOpen, setActionMenuOpen] = useState(false)
+  const [expandedInteractionGroups, setExpandedInteractionGroups] = useState<Record<string, boolean>>({})
+  const [expandedAhipMessages, setExpandedAhipMessages] = useState<Record<string, boolean>>({})
+  const [collapsedAhipMessages, setCollapsedAhipMessages] = useState<Record<string, boolean>>({})
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const selectedAgentSessions = useMemo(
@@ -63,13 +144,17 @@ export function ChatPage() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
   }, [selectedMessages.length, running])
 
-  // Close session dropdown on outside click
+  // Close header dropdowns on outside click.
   useEffect(() => {
-    if (!sessionDropdownOpen) return
-    const handler = () => setSessionDropdownOpen(false)
+    if (!sessionDropdownOpen && !previewDropdownOpen && !actionMenuOpen) return
+    const handler = () => {
+      setSessionDropdownOpen(false)
+      setPreviewDropdownOpen(false)
+      setActionMenuOpen(false)
+    }
     document.addEventListener('click', handler, { once: true })
     return () => document.removeEventListener('click', handler)
-  }, [sessionDropdownOpen])
+  }, [actionMenuOpen, previewDropdownOpen, sessionDropdownOpen])
 
   const handleSend = () => {
     const text = draft.trim()
@@ -103,41 +188,102 @@ export function ChatPage() {
   const latestTrace = selectedTraces[selectedTraces.length - 1]
   const recentTraces = selectedTraces.slice(-3).reverse()
   const scenarioPrompts = AHIP_PROTOCOL_SCENARIOS.map((scenario) => scenario.promptExamples[0] ?? scenario.title)
-  const selectedModelIsReasoner = selectedAgent?.provider === 'deepseek' && /reasoner/i.test(selectedAgent.model)
+  const visibleAgents = useMemo(() => {
+    const query = agentSearch.trim().toLowerCase()
+    if (!query) return agents
+
+    return agents.filter((agent) =>
+      `${agent.name} ${agent.model} ${agent.provider} ${agent.systemPrompt} ${agent.bio ?? ''}`
+        .toLowerCase()
+        .includes(query),
+    )
+  }, [agentSearch, agents])
+  const loadingPhaseLabel = getLoadingPhaseLabel(pipelineStatus?.phase)
+  const loadingProgressText = getLoadingProgressText(pipelineStatus?.label, pipelineStatus?.detail)
+  const messageRenderGroups = useMemo(() => groupMessagesForRender(selectedMessages), [selectedMessages])
+  const latestMessageId = selectedMessages[selectedMessages.length - 1]?.messageId
+
+  const renderAhipMessage = (message: AhipPreviewMessage) => {
+    if (message.kind !== 'ahip') {
+      return (
+        <AhipMessageRenderer
+          key={message.messageId}
+          message={message}
+          onAction={(action, item) => dispatchAction(action, item)}
+          onArtifactOpen={(artifact, item) => openArtifact(artifact, item)}
+          onRenderError={(item, error) => recordRenderError(item, error)}
+        />
+      )
+    }
+
+    const collapsed =
+      collapsedAhipMessages[message.messageId] ??
+      (expandedAhipMessages[message.messageId] ? false : message.messageId !== latestMessageId)
+
+    if (collapsed) {
+      return (
+        <div key={message.messageId} className="rounded-lg border border-default bg-panel text-sm text-secondary">
+          <button
+            type="button"
+            className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left transition hover-bg-muted"
+            onClick={() => {
+              setExpandedAhipMessages((current) => ({ ...current, [message.messageId]: true }))
+              setCollapsedAhipMessages((current) => ({ ...current, [message.messageId]: false }))
+            }}
+          >
+            <span className="truncate font-medium text-primary">{getAhipSummary(message)}</span>
+            <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
+          </button>
+        </div>
+      )
+    }
+
+    return (
+      <div key={message.messageId} className="space-y-2">
+        <div className="flex justify-end">
+          <IconButton
+            className="h-8 w-8"
+            aria-label="Collapse AHIP"
+            onClick={() => {
+              setCollapsedAhipMessages((current) => ({ ...current, [message.messageId]: true }))
+              setExpandedAhipMessages((current) => ({ ...current, [message.messageId]: false }))
+            }}
+          >
+            <ChevronsDownUp className="h-4 w-4" />
+          </IconButton>
+        </div>
+        <AhipMessageRenderer
+          message={message}
+          onAction={(action, item) => {
+            setCollapsedAhipMessages((current) => ({ ...current, [message.messageId]: true }))
+            setExpandedAhipMessages((current) => ({ ...current, [message.messageId]: false }))
+            return dispatchAction(action, item)
+          }}
+          onArtifactOpen={(artifact, item) => openArtifact(artifact, item)}
+          onRenderError={(item, error) => recordRenderError(item, error)}
+        />
+      </div>
+    )
+  }
 
   return (
     <>
-      {/* ── ListPanel: IM-style agent list ── */}
       <ListPanel
         headerClassName="p-3"
         contentClassName="min-h-0 flex-1 overflow-y-auto"
         header={
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <p className="text-xs uppercase tracking-[0.16em] text-muted">AHIP Preview</p>
-              <h2 className="text-base font-semibold text-primary">Agents</h2>
-            </div>
-            <Button
-              size="sm"
-              variant="accent"
-              className="h-8 w-8 shrink-0 rounded-full px-0"
-              onClick={() => navigate('/agents')}
-              aria-label="Manage agents"
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
+          <SearchBar value={agentSearch} onChange={setAgentSearch} placeholder="Search agents" />
         }
       >
         <div>
-          {agents.map((agent) => {
+          {visibleAgents.map((agent) => {
             const active = agent.agentId === selectedAgent?.agentId
-            const hasKey = Boolean(secrets.apiKeysByAgentId[agent.agentId])
 
             return (
-              <button
+              <AgentListItem
                 key={agent.agentId}
-                type="button"
+                agent={toPreviewAgentListItem(agent)}
+                active={active}
                 onClick={() => {
                   const latestSession = sessions
                     .filter((s) => s.agentId === agent.agentId)
@@ -145,24 +291,7 @@ export function ChatPage() {
                   if (latestSession) selectSession(latestSession.sessionId)
                   closePanel()
                 }}
-                className={cn(
-                  'flex w-full items-start gap-3 border-b border-default px-3 py-3 text-left transition',
-                  active ? 'bg-muted' : 'bg-surface hover-bg-muted',
-                )}
-              >
-                <Avatar label={agent.name} src={agent.avatar} tone="agent" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-primary">{agent.name}</p>
-                  <p className="mt-0.5 truncate text-xs text-muted">
-                    {agent.bio || agent.systemPrompt.slice(0, 60)}
-                  </p>
-                  <div className="mt-1.5 flex flex-wrap gap-1">
-                    <Badge label={agent.provider} variant="default" />
-                    <Badge label={agent.model.split('/').pop() ?? agent.model} variant="muted" />
-                    <Badge label={engineLabel(hasKey)} variant={hasKey ? 'accent' : 'warning'} />
-                  </div>
-                </div>
-              </button>
+              />
             )
           })}
           {agents.length === 0 ? (
@@ -172,11 +301,17 @@ export function ChatPage() {
               description="Go to Agents page to create your first AHIP agent."
             />
           ) : null}
+          {agents.length > 0 && visibleAgents.length === 0 ? (
+            <EmptyState
+              eyebrow="Agents"
+              title="No matching agents"
+              description="Try a different search."
+            />
+          ) : null}
         </div>
       </ListPanel>
 
-      {/* ── MainPanel: chat area ── */}
-      <MainPanel className="p-0">
+      <MainPanel className="h-screen max-h-screen overflow-hidden p-0">
         {!selectedAgent || !selectedSession ? (
           <EmptyState
             eyebrow="AHIP"
@@ -184,9 +319,8 @@ export function ChatPage() {
             description="Go to Agents to add a provider, model, and optional local API key."
           />
         ) : (
-          <div className="flex h-full min-h-[640px] flex-col bg-surface">
-            {/* ── IM-style header with session dropdown ── */}
-            <header className="relative border-b border-default px-4 py-3">
+          <div className="flex h-full min-h-0 flex-col overflow-hidden bg-surface">
+            <header className="relative z-20 shrink-0 border-b border-default bg-surface px-4 py-3">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-3">
                   <Avatar label={selectedAgent.name} src={selectedAgent.avatar} tone="agent" />
@@ -207,12 +341,13 @@ export function ChatPage() {
                       active={sessionDropdownOpen}
                       onClick={(e) => {
                         e.stopPropagation()
+                        setPreviewDropdownOpen(false)
+                        setActionMenuOpen(false)
                         setSessionDropdownOpen((open) => !open)
                       }}
                       aria-label="Sessions"
                     >
                       <FileText className="h-4 w-4" />
-                      <ChevronDown className="h-3 w-3" />
                     </IconButton>
                     {sessionDropdownOpen ? (
                       <div
@@ -262,21 +397,139 @@ export function ChatPage() {
                       </div>
                     ) : null}
                   </div>
+                  <div className="relative">
+                    <IconButton
+                      active={previewDropdownOpen}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setSessionDropdownOpen(false)
+                        setActionMenuOpen(false)
+                        setPreviewDropdownOpen((open) => !open)
+                      }}
+                      aria-label="Local preview"
+                    >
+                      <ShieldCheck className="h-4 w-4" />
+                    </IconButton>
+                    {previewDropdownOpen ? (
+                      <div
+                        className="absolute right-0 top-[calc(100%+8px)] z-20 max-h-[min(720px,calc(100vh-96px))] w-[min(460px,calc(100vw-120px))] overflow-y-auto rounded-2xl border border-default bg-surface p-3 text-xs text-secondary shadow-xl"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <p className="font-semibold text-primary">Local BYOK preview</p>
+                        <p className="mt-1">
+                          Chats and API keys stay in this browser's IndexedDB. JSON export excludes API keys.
+                        </p>
+                        <p className="mt-1 text-warning">
+                          Do not paste API keys or private secrets into chat messages.
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <Button size="sm" variant="outline" onClick={() => void handleExport('session')} disabled={!selectedSession || hydrating}>
+                            Export session JSON
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => void handleExport('all')} disabled={hydrating}>
+                            Export all JSON
+                          </Button>
+                        </div>
+                        <details className="mt-2">
+                          <summary className="cursor-pointer text-primary">AHIP Skill manifest preview</summary>
+                          <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap rounded-md bg-muted p-2">{skillManifest}</pre>
+                        </details>
+                        <details className="mt-2">
+                          <summary className="cursor-pointer text-primary">
+                            Runtime trace{latestTrace ? `: ${latestTrace.mode} / ${latestTrace.status}` : ''}
+                          </summary>
+                          {recentTraces.length ? (
+                            <div className="mt-2 space-y-2">
+                              {recentTraces.map((trace) => (
+                                <div key={trace.traceId} className="rounded-md bg-muted p-2">
+                                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-primary">
+                                    <span>{trace.mode}</span>
+                                    <span>{trace.status}</span>
+                                    <span>{trace.provider}</span>
+                                    <span>{trace.model}</span>
+                                  </div>
+                                  <p className="mt-1">
+                                    scenario={trace.scenarioId ?? 'none'} decision={trace.decisionMode ?? 'none'} repair={trace.repairCount} message={trace.finalMessageKind ?? 'none'}
+                                  </p>
+                                  {trace.actionId ? <p className="mt-1">action={trace.actionId}</p> : null}
+                                  {trace.artifactIds?.length ? <p className="mt-1">artifacts={trace.artifactIds.join(', ')}</p> : null}
+                                  {trace.fallbackUsed ? <p className="mt-1">fallback used</p> : null}
+                                  {trace.validationErrors.length ? (
+                                    <p className="mt-1 text-warning">validation: {trace.validationErrors.join('; ')}</p>
+                                  ) : null}
+                                  {trace.error ? <p className="mt-1 text-warning">error: {trace.error}</p> : null}
+                                </div>
+                              ))}
+                              {latestTrace?.decisionJson ? (
+                                <details>
+                                  <summary className="cursor-pointer text-primary">Latest decision JSON</summary>
+                                  <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap rounded-md bg-muted p-2">
+                                    {latestTrace.decisionJson}
+                                  </pre>
+                                </details>
+                              ) : null}
+                            </div>
+                          ) : (
+                            <p className="mt-2">No runtime trace yet. Send a message to record local demo or LangGraph execution.</p>
+                          )}
+                        </details>
+                        <details className="mt-2">
+                          <summary className="cursor-pointer text-primary">
+                            Artifact events{selectedArtifactEvents.length ? `: ${selectedArtifactEvents.length}` : ''}
+                          </summary>
+                          {selectedArtifactEvents.length ? (
+                            <div className="mt-2 space-y-2">
+                              {selectedArtifactEvents.slice(-5).reverse().map((event) => (
+                                <div key={event.eventId} className="rounded-md bg-muted p-2">
+                                  <p className="text-primary">{event.name ?? event.artifactId}</p>
+                                  <p className="mt-1">
+                                    {event.artifactKind} opened at {new Date(event.openedAt).toLocaleString()}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="mt-2">No artifact open events yet.</p>
+                          )}
+                        </details>
+                      </div>
+                    ) : null}
+                  </div>
+                  <div className="relative">
+                    <IconButton
+                      active={actionMenuOpen}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setSessionDropdownOpen(false)
+                        setPreviewDropdownOpen(false)
+                        setActionMenuOpen((open) => !open)
+                      }}
+                      aria-label="Menu"
+                    >
+                      <Menu className="h-4 w-4" />
+                    </IconButton>
+                    {actionMenuOpen ? (
+                      <div
+                        className="absolute right-0 top-[calc(100%+8px)] z-20 w-44 rounded-2xl border border-default bg-surface p-2 shadow-xl"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          type="button"
+                          disabled={hydrating}
+                          onClick={() => {
+                            setActionMenuOpen(false)
+                            void resetPreview()
+                          }}
+                          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-primary transition hover-bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                          Reset
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
               </div>
-              {selectedProviderTest.status !== 'idle' ? (
-                <div className="mt-2 rounded-md border border-default bg-muted px-3 py-2 text-xs text-secondary">
-                  <span className="font-semibold text-primary">Provider test:</span>{' '}
-                  {selectedProviderTest.status}
-                  {selectedProviderTest.testedAt ? ` at ${new Date(selectedProviderTest.testedAt).toLocaleString()}` : ''}
-                  {selectedProviderTest.message ? ` - ${selectedProviderTest.message}` : ''}
-                </div>
-              ) : null}
-              {selectedModelIsReasoner ? (
-                <div className="mt-2 rounded-md border border-default bg-muted px-3 py-2 text-xs text-warning">
-                  DeepSeek reasoner can take several minutes. Use deepseek-chat for faster AHIP JSON preview.
-                </div>
-              ) : null}
               {hydrationError ? (
                 <div className="mt-2 rounded-md border border-default bg-muted px-3 py-2 text-xs text-warning">
                   Local database warning: {hydrationError}
@@ -318,29 +571,57 @@ export function ChatPage() {
                   </div>
                 </div>
               ) : null}
-              {selectedMessages.map((message) => (
-                <AhipMessageRenderer
-                  key={message.messageId}
-                  message={message}
-                  onAction={(action, item) => dispatchAction(action, item)}
-                  onArtifactOpen={(artifact, item) => openArtifact(artifact, item)}
-                  onRenderError={(item, error) => recordRenderError(item, error)}
-                />
-              ))}
+              {messageRenderGroups.map((group) => {
+                if (group.kind === 'message') {
+                  return renderAhipMessage(group.message)
+                }
+
+                const expanded = Boolean(expandedInteractionGroups[group.key])
+
+                return (
+                  <div key={group.key} className="rounded-lg border border-default bg-panel text-sm text-secondary">
+                    <button
+                      type="button"
+                      className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left transition hover-bg-muted"
+                      onClick={() =>
+                        setExpandedInteractionGroups((current) => ({
+                          ...current,
+                          [group.key]: !current[group.key],
+                        }))
+                      }
+                    >
+                      <span className="font-medium text-primary">Applet interactions</span>
+                      <span className="text-xs text-muted">
+                        {group.interactionCount} interaction{group.interactionCount === 1 ? '' : 's'} · {expanded ? 'Hide details' : 'Show details'}
+                      </span>
+                    </button>
+                    {expanded ? (
+                      <div className="space-y-3 border-t border-default p-3">
+                        {group.messages.map((message) => (
+                          renderAhipMessage(message)
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                )
+              })}
               {running ? (
-                <div className="rounded-lg border border-default bg-panel px-3 py-2 text-sm text-secondary">
+                <div className="rounded-lg border border-default bg-panel px-3 py-3 text-sm text-secondary">
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <p className="font-medium text-primary">
-                        {pipelineStatus?.label ?? 'Generating and validating AHIP response...'}
-                      </p>
-                      <p className="mt-1 text-xs">
-                        {longRunningRequest
-                          ? `${longRunningRequest.operationLabel} You can keep waiting or cancel this request.`
-                          : pipelineStatus
-                            ? `${pipelineStatus.phase}${pipelineStatus.providerActive ? ' · provider active' : ' · local runtime'} · last activity ${new Date(pipelineStatus.lastActivityAt).toLocaleTimeString()}`
-                            : 'The runtime is still running.'}
-                      </p>
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="relative flex h-3 w-3 shrink-0">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-40" />
+                        <span className="relative inline-flex h-3 w-3 rounded-full bg-accent" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="font-medium text-primary">
+                          {longRunningRequest ? 'Still waiting for provider response' : 'Working on AHIP response...'}
+                        </p>
+                        <p className="mt-1 text-xs text-muted">{loadingPhaseLabel}</p>
+                        {loadingProgressText ? (
+                          <p className="mt-1 text-xs text-muted">{loadingProgressText}</p>
+                        ) : null}
+                      </div>
                     </div>
                     {longRunningRequest ? (
                       <div className="flex flex-wrap gap-2">
@@ -351,92 +632,19 @@ export function ChatPage() {
                           Cancel
                         </Button>
                       </div>
-                    ) : null}
+                    ) : (
+                      <div className="flex items-center gap-1" aria-hidden="true">
+                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-muted" />
+                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-muted [animation-delay:150ms]" />
+                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-muted [animation-delay:300ms]" />
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : null}
             </div>
 
-            <footer className="border-t border-default bg-muted/60 px-4 py-3">
-              <div className="mb-3 rounded-lg border border-default bg-surface p-3 text-xs text-secondary">
-                <p className="font-semibold text-primary">Local BYOK preview</p>
-                <p className="mt-1">
-                  Chats and API keys stay in this browser's IndexedDB. JSON export excludes API keys.
-                </p>
-                <p className="mt-1 text-warning">
-                  Do not paste API keys or private secrets into chat messages.
-                </p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <Button size="sm" variant="outline" onClick={() => void handleExport('session')} disabled={!selectedSession || hydrating}>
-                    Export session JSON
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => void handleExport('all')} disabled={hydrating}>
-                    Export all JSON
-                  </Button>
-                </div>
-                <details className="mt-2">
-                  <summary className="cursor-pointer text-primary">AHIP Skill manifest preview</summary>
-                  <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap rounded-md bg-muted p-2">{skillManifest}</pre>
-                </details>
-                <details className="mt-2">
-                  <summary className="cursor-pointer text-primary">
-                    Runtime trace{latestTrace ? `: ${latestTrace.mode} / ${latestTrace.status}` : ''}
-                  </summary>
-                  {recentTraces.length ? (
-                    <div className="mt-2 space-y-2">
-                      {recentTraces.map((trace) => (
-                        <div key={trace.traceId} className="rounded-md bg-muted p-2">
-                          <div className="flex flex-wrap gap-x-3 gap-y-1 text-primary">
-                            <span>{trace.mode}</span>
-                            <span>{trace.status}</span>
-                            <span>{trace.provider}</span>
-                            <span>{trace.model}</span>
-                          </div>
-                          <p className="mt-1">
-                            scenario={trace.scenarioId ?? 'none'} decision={trace.decisionMode ?? 'none'} repair={trace.repairCount} message={trace.finalMessageKind ?? 'none'}
-                          </p>
-                          {trace.actionId ? <p className="mt-1">action={trace.actionId}</p> : null}
-                          {trace.artifactIds?.length ? <p className="mt-1">artifacts={trace.artifactIds.join(', ')}</p> : null}
-                          {trace.fallbackUsed ? <p className="mt-1">fallback used</p> : null}
-                          {trace.validationErrors.length ? (
-                            <p className="mt-1 text-warning">validation: {trace.validationErrors.join('; ')}</p>
-                          ) : null}
-                          {trace.error ? <p className="mt-1 text-warning">error: {trace.error}</p> : null}
-                        </div>
-                      ))}
-                      {latestTrace?.decisionJson ? (
-                        <details>
-                          <summary className="cursor-pointer text-primary">Latest decision JSON</summary>
-                          <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap rounded-md bg-muted p-2">
-                            {latestTrace.decisionJson}
-                          </pre>
-                        </details>
-                      ) : null}
-                    </div>
-                  ) : (
-                    <p className="mt-2">No runtime trace yet. Send a message to record local demo or LangGraph execution.</p>
-                  )}
-                </details>
-                <details className="mt-2">
-                  <summary className="cursor-pointer text-primary">
-                    Artifact events{selectedArtifactEvents.length ? `: ${selectedArtifactEvents.length}` : ''}
-                  </summary>
-                  {selectedArtifactEvents.length ? (
-                    <div className="mt-2 space-y-2">
-                      {selectedArtifactEvents.slice(-5).reverse().map((event) => (
-                        <div key={event.eventId} className="rounded-md bg-muted p-2">
-                          <p className="text-primary">{event.name ?? event.artifactId}</p>
-                          <p className="mt-1">
-                            {event.artifactKind} opened at {new Date(event.openedAt).toLocaleString()}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="mt-2">No artifact open events yet.</p>
-                  )}
-                </details>
-              </div>
+            <footer className="shrink-0 border-t border-default bg-muted/60 px-4 py-3">
               <div className="flex items-end gap-2">
                 <textarea
                   value={draft}
@@ -454,10 +662,6 @@ export function ChatPage() {
                   <Button variant="accent" disabled={!draft.trim() || running || hydrating} onClick={handleSend}>
                     <Send className="h-4 w-4" />
                     Send
-                  </Button>
-                  <Button variant="outline" onClick={() => void resetPreview()} disabled={hydrating}>
-                    <RotateCcw className="h-4 w-4" />
-                    Reset
                   </Button>
                 </div>
               </div>
