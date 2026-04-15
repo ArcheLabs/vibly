@@ -123,12 +123,12 @@ export function WalletPage() {
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               <div className="rounded-lg border border-default bg-panel p-4">
                 <p className="text-xs uppercase tracking-[0.16em] text-muted">Balance</p>
-                <p className="mt-2 text-2xl font-semibold text-primary">{activeWalletAccount.balance.toFixed(2)} VER</p>
+                <p className="mt-2 text-2xl font-semibold text-primary">{activeWalletAccount.balance.toFixed(2)} VIB</p>
                 <p className="mt-1 text-xs text-muted">Available for preview actions</p>
               </div>
               <div className="rounded-lg border border-default bg-panel p-4">
                 <p className="text-xs uppercase tracking-[0.16em] text-muted">Gas</p>
-                <p className="mt-2 text-2xl font-semibold text-primary">{activeWalletAccount.gasBalance.toFixed(2)} VER</p>
+                <p className="mt-2 text-2xl font-semibold text-primary">{activeWalletAccount.gasBalance.toFixed(2)} VIB</p>
                 <p className="mt-1 text-xs text-muted">{insufficientGas ? 'Top up before publish flows' : 'Ready for MVP demos'}</p>
               </div>
               <div className="rounded-lg border border-default bg-panel p-4">

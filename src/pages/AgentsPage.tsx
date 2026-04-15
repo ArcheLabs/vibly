@@ -309,12 +309,13 @@ export function AgentsPage() {
                     onChange={(e) => updateAgentApiKey(focusedAgent.agentId, e.target.value)}
                   />
                 </label>
-                <div className="flex flex-wrap gap-2">
-                  <Button variant="outline" onClick={() => deleteAgentApiKey(focusedAgent.agentId)}>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button variant="danger" onClick={() => deleteAgentApiKey(focusedAgent.agentId)}>
                     Clear key
                   </Button>
                   <Button
                     variant="accent"
+                    className="ml-auto"
                     disabled={focusedProviderTest.status === 'testing' || hydrating}
                     onClick={() => {
                       // Make sure this agent is selected so the test applies

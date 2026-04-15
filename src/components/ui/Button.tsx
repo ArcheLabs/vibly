@@ -2,7 +2,7 @@ import type { ButtonHTMLAttributes } from 'react'
 import { cn } from '@/lib/utils'
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: 'outline' | 'muted' | 'accent' | 'ghost'
+  variant?: 'outline' | 'muted' | 'accent' | 'danger' | 'ghost'
   size?: 'sm' | 'md'
 }
 
@@ -10,6 +10,7 @@ const variantClassMap: Record<NonNullable<ButtonProps['variant']>, string> = {
   outline: 'border border-default bg-surface text-primary hover-bg-muted',
   muted: 'border border-default bg-muted text-secondary hover-border-strong',
   accent: 'border border-accent bg-accent text-accent-foreground hover-opacity-90',
+  danger: 'border border-danger bg-danger text-danger-foreground hover-opacity-90',
   ghost: 'border border-transparent bg-transparent text-secondary hover-bg-muted',
 }
 
