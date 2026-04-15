@@ -97,6 +97,10 @@ function getAhipSummary(message: AhipPreviewMessage) {
   return `${title} · ${message.item.kind}`
 }
 
+function hasAhipWidget(message: AhipPreviewMessage) {
+  return message.kind === 'ahip' && Boolean(message.item.widgets?.length)
+}
+
 export function ChatPage() {
   const {
     agents,
@@ -133,6 +137,7 @@ export function ChatPage() {
   const [expandedInteractionGroups, setExpandedInteractionGroups] = useState<Record<string, boolean>>({})
   const [expandedAhipMessages, setExpandedAhipMessages] = useState<Record<string, boolean>>({})
   const [collapsedAhipMessages, setCollapsedAhipMessages] = useState<Record<string, boolean>>({})
+  const collapsedInitializedSessionRef = useRef<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const selectedAgentSessions = useMemo(
@@ -143,6 +148,22 @@ export function ChatPage() {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
   }, [selectedMessages.length, running])
+
+  useEffect(() => {
+    if (!selectedSession || hydrating) return
+    if (collapsedInitializedSessionRef.current === selectedSession.sessionId) return
+
+    collapsedInitializedSessionRef.current = selectedSession.sessionId
+    setCollapsedAhipMessages(
+      Object.fromEntries(
+        selectedMessages
+          .filter((message) => message.kind === 'ahip')
+          .map((message) => [message.messageId, true]),
+      ),
+    )
+    setExpandedAhipMessages({})
+    setExpandedInteractionGroups({})
+  }, [hydrating, selectedMessages, selectedSession])
 
   // Close header dropdowns on outside click.
   useEffect(() => {
@@ -216,11 +237,27 @@ export function ChatPage() {
       )
     }
 
+    const containsWidget = hasAhipWidget(message)
     const collapsed =
       collapsedAhipMessages[message.messageId] ??
-      (expandedAhipMessages[message.messageId] ? false : message.messageId !== latestMessageId)
+      (containsWidget ? false : expandedAhipMessages[message.messageId] ? false : message.messageId !== latestMessageId)
 
-    if (collapsed) {
+    const renderer = (
+      <AhipMessageRenderer
+        message={message}
+        onAction={(action, item) => {
+          if (!containsWidget) {
+            setCollapsedAhipMessages((current) => ({ ...current, [message.messageId]: true }))
+            setExpandedAhipMessages((current) => ({ ...current, [message.messageId]: false }))
+          }
+          return dispatchAction(action, item)
+        }}
+        onArtifactOpen={(artifact, item) => openArtifact(artifact, item)}
+        onRenderError={(item, error) => recordRenderError(item, error)}
+      />
+    )
+
+    if (collapsed && !containsWidget) {
       return (
         <div key={message.messageId} className="rounded-lg border border-default bg-panel text-sm text-secondary">
           <button
@@ -234,6 +271,47 @@ export function ChatPage() {
             <span className="truncate font-medium text-primary">{getAhipSummary(message)}</span>
             <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
           </button>
+        </div>
+      )
+    }
+
+    if (containsWidget) {
+      return (
+        <div key={message.messageId} className="space-y-2">
+          {collapsed ? (
+            <div className="rounded-lg border border-default bg-panel text-sm text-secondary">
+              <button
+                type="button"
+                className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left transition hover-bg-muted"
+                onClick={() => {
+                  setExpandedAhipMessages((current) => ({ ...current, [message.messageId]: true }))
+                  setCollapsedAhipMessages((current) => ({ ...current, [message.messageId]: false }))
+                }}
+              >
+                <span className="truncate font-medium text-primary">{getAhipSummary(message)}</span>
+                <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex justify-end">
+              <IconButton
+                className="h-8 w-8"
+                aria-label="Collapse AHIP"
+                onClick={() => {
+                  setCollapsedAhipMessages((current) => ({ ...current, [message.messageId]: true }))
+                  setExpandedAhipMessages((current) => ({ ...current, [message.messageId]: false }))
+                }}
+              >
+                <ChevronsDownUp className="h-4 w-4" />
+              </IconButton>
+            </div>
+          )}
+          <div
+            className={collapsed ? 'h-0 overflow-hidden opacity-0 pointer-events-none' : undefined}
+            aria-hidden={collapsed}
+          >
+            {renderer}
+          </div>
         </div>
       )
     }
@@ -252,16 +330,7 @@ export function ChatPage() {
             <ChevronsDownUp className="h-4 w-4" />
           </IconButton>
         </div>
-        <AhipMessageRenderer
-          message={message}
-          onAction={(action, item) => {
-            setCollapsedAhipMessages((current) => ({ ...current, [message.messageId]: true }))
-            setExpandedAhipMessages((current) => ({ ...current, [message.messageId]: false }))
-            return dispatchAction(action, item)
-          }}
-          onArtifactOpen={(artifact, item) => openArtifact(artifact, item)}
-          onRenderError={(item, error) => recordRenderError(item, error)}
-        />
+        {renderer}
       </div>
     )
   }

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { AHIPWidgetRendererProps } from '@ahip/react'
 import { getDynamicApplet } from '@/modules/ahip-preview/dynamicAppletRegistry'
 import { registerWidgetListener } from '@/modules/ahip-preview/widgetActionBus'
+import { loadWidgetState, makeWidgetStateKey, nowIso, saveWidgetState } from '@/modules/ahip-preview/storage'
 
 const SANDBOX_FLAGS = 'allow-scripts'
 const DEFAULT_HEIGHT = 560
@@ -18,6 +19,47 @@ export function DynamicAppletRenderer({ widget, item, host, fallback }: AHIPWidg
   const [error, setError] = useState<string | null>(null)
 
   const applet = getDynamicApplet(widget.widget_type)
+  const widgetKey = makeWidgetStateKey(item.item_id, widget.widget_id)
+
+  const persistWidgetState = useCallback((state: unknown) => {
+    const sessionId = typeof item.session_id === 'string' ? item.session_id : 'unknown_session'
+    void saveWidgetState({
+      widgetKey,
+      sessionId,
+      itemId: item.item_id,
+      widgetId: widget.widget_id,
+      widgetType: widget.widget_type,
+      state,
+      updatedAt: nowIso(),
+    })
+  }, [item.item_id, item.session_id, widget.widget_id, widget.widget_type, widgetKey])
+
+  const restoreWidgetState = useCallback(async () => {
+    const iframe = iframeRef.current
+    if (!iframe?.contentWindow) return
+
+    const persisted = await loadWidgetState(widgetKey)
+    if (!persisted) return
+
+    const restorePayload = {
+      type: 'ahip_host_restore_state',
+      payload: {
+        state: persisted.state,
+        widget_id: widget.widget_id,
+        restored_at: nowIso(),
+      },
+    }
+
+    iframe.contentWindow.postMessage(restorePayload, '*')
+    iframe.contentWindow.postMessage(
+      {
+        type: 'ahip_host_action',
+        action: 'restore_state',
+        payload: restorePayload.payload,
+      },
+      '*',
+    )
+  }, [widget.widget_id, widgetKey])
 
   // Outbound: iframe → host
   const handleMessage = useCallback((event: MessageEvent) => {
@@ -27,7 +69,24 @@ export function DynamicAppletRenderer({ widget, item, host, fallback }: AHIPWidg
     const data = event.data
     if (!data || typeof data !== 'object') return
 
+    if (data.type === 'ahip_widget_state') {
+      const state = data.payload?.state ?? data.state ?? data.payload
+      if (state !== undefined) persistWidgetState(state)
+      return
+    }
+
     if (data.type === 'ahip_widget_action' && data.payload) {
+      const state =
+        data.payload.widget_state ??
+        data.payload.state ??
+        (data.payload.board_state
+          ? {
+              board_state: data.payload.board_state,
+              last_action: data.payload,
+            }
+          : undefined)
+      if (state !== undefined) persistWidgetState(state)
+
       host.actionDispatcher?.dispatchAction(
         {
           id: `dynamic_${Date.now()}`,
@@ -45,7 +104,7 @@ export function DynamicAppletRenderer({ widget, item, host, fallback }: AHIPWidg
     if (data.type === 'ahip_widget_resize' && typeof data.height === 'number') {
       setHeight(Math.min(Math.max(data.height, MIN_HEIGHT), MAX_HEIGHT))
     }
-  }, [host, widget, item])
+  }, [host, widget, item, persistWidgetState])
 
   useEffect(() => {
     window.addEventListener('message', handleMessage)
@@ -55,6 +114,9 @@ export function DynamicAppletRenderer({ widget, item, host, fallback }: AHIPWidg
   // Inbound: host → iframe (via widget action bus)
   useEffect(() => {
     const unregister = registerWidgetListener(widget.widget_id, (action) => {
+      if (action.payload?.widget_state !== undefined) {
+        persistWidgetState(action.payload.widget_state)
+      }
       const iframe = iframeRef.current
       if (!iframe?.contentWindow) return
       iframe.contentWindow.postMessage(
@@ -67,7 +129,7 @@ export function DynamicAppletRenderer({ widget, item, host, fallback }: AHIPWidg
       )
     })
     return unregister
-  }, [widget.widget_id])
+  }, [persistWidgetState, widget.widget_id])
 
   if (!applet) {
     return (
@@ -119,6 +181,7 @@ export function DynamicAppletRenderer({ widget, item, host, fallback }: AHIPWidg
           title={applet.displayName}
           className="h-full w-full"
           style={{ border: 'none' }}
+          onLoad={() => { void restoreWidgetState() }}
           onError={() => setError('Failed to load applet.')}
         />
       </div>

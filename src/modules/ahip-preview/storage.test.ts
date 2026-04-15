@@ -23,8 +23,12 @@ import {
   saveAhipPreviewSecrets,
   saveAhipPreviewState,
   loadDynamicApplets,
+  loadWidgetState,
+  loadWidgetStates,
+  makeWidgetStateKey,
   saveProviderTest,
   saveSecret,
+  saveWidgetState,
 } from './storage'
 
 afterEach(async () => {
@@ -129,6 +133,31 @@ describe('AHIP preview IndexedDB storage', () => {
 
     await hydrateDynamicAppletsFromDb()
     expect(hasDynamicApplet('dev.vibly/dynamic_chess')).toBe(true)
+  })
+
+  it('persists dynamic widget state snapshots separately from AHIP messages', async () => {
+    await resetAhipPreviewDb()
+    const widgetKey = makeWidgetStateKey('item_chess', 'chess_widget')
+
+    await saveWidgetState({
+      widgetKey,
+      sessionId: 'session_ahip_preview',
+      itemId: 'item_chess',
+      widgetId: 'chess_widget',
+      widgetType: 'dev.vibly/dynamic_chess',
+      state: {
+        turn: 'black',
+        moves: ['e2e4', 'e7e5'],
+      },
+      updatedAt: new Date(0).toISOString(),
+    })
+
+    const restored = await loadWidgetState(widgetKey)
+    const allStates = await loadWidgetStates()
+
+    expect(restored?.state).toMatchObject({ turn: 'black' })
+    expect(allStates.some((entry) => entry.widgetKey === widgetKey)).toBe(true)
+    expect(JSON.stringify(await loadAhipPreviewSnapshot())).not.toContain('e2e4')
   })
 
   it('migrates legacy sessionStorage dynamic applets into IndexedDB', async () => {
@@ -242,6 +271,15 @@ describe('AHIP preview IndexedDB storage', () => {
       validationErrors: [],
       finalMessageKind: 'text',
     })
+    await saveWidgetState({
+      widgetKey: makeWidgetStateKey('item_dynamic_export_chess', 'dynamic_export_chess_widget'),
+      sessionId,
+      itemId: 'item_dynamic_export_chess',
+      widgetId: 'dynamic_export_chess_widget',
+      widgetType: 'dev.vibly/dynamic_export_chess',
+      state: { moves: ['e2e4'] },
+      updatedAt: new Date(0).toISOString(),
+    })
 
     const exportedSession = await exportAhipPreviewData({ kind: 'session', sessionId })
     const exportedAll = await exportAhipPreviewData({ kind: 'all' })
@@ -250,6 +288,8 @@ describe('AHIP preview IndexedDB storage', () => {
     expect(exportedAll.agents.length).toBeGreaterThan(0)
     expect(exportedSession.dynamicApplets.some((entry) => entry.widgetType === 'dev.vibly/dynamic_export_chess')).toBe(true)
     expect(exportedAll.dynamicApplets.some((entry) => entry.widgetType === 'dev.vibly/dynamic_export_chess')).toBe(true)
+    expect(exportedSession.widgetStates.some((entry) => entry.widgetId === 'dynamic_export_chess_widget')).toBe(true)
+    expect(exportedAll.widgetStates.some((entry) => entry.widgetId === 'dynamic_export_chess_widget')).toBe(true)
     expect(JSON.stringify(exportedSession)).not.toContain('sk-export-secret')
     expect(JSON.stringify(exportedAll)).not.toContain('sk-export-secret')
   })

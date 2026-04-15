@@ -80,6 +80,16 @@ export interface AhipDynamicAppletEntry {
   registeredAt: string
 }
 
+export interface AhipWidgetStateEntry {
+  widgetKey: string
+  sessionId: string
+  itemId: string
+  widgetId: string
+  widgetType: string
+  state: unknown
+  updatedAt: string
+}
+
 export interface AhipPreviewMessageMetadata {
   source?: 'widget_action'
   widgetId?: string
@@ -159,6 +169,7 @@ export interface AhipPreviewExport {
   providerTests: Record<string, AhipProviderTest>
   artifactOpenEvents: Record<string, AhipArtifactOpenEvent[]>
   dynamicApplets: AhipDynamicAppletEntry[]
+  widgetStates: AhipWidgetStateEntry[]
 }
 
 export type AhipModelDecision =

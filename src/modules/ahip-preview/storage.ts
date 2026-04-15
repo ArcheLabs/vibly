@@ -8,6 +8,7 @@ import type {
   AhipPreviewMessage,
   AhipPreviewSecrets,
   AhipPreviewSession,
+  AhipWidgetStateEntry,
   AhipPreviewState,
   AhipProviderTest,
   AhipRuntimeTrace,
@@ -40,6 +41,7 @@ class AhipPreviewDB extends Dexie {
   providerTests!: Table<AhipProviderTest & { agentId: string }, string>
   artifactOpenEvents!: Table<AhipArtifactOpenEvent, string>
   dynamicApplets!: Table<AhipDynamicAppletEntry, string>
+  widgetStates!: Table<AhipWidgetStateEntry, string>
   secrets!: Table<SecretRecord, string>
   meta!: Table<MetaRecord, string>
 
@@ -62,6 +64,11 @@ class AhipPreviewDB extends Dexie {
       ...versionOneSchema,
       dynamicApplets: '&widgetType, registeredAt',
     })
+    this.version(3).stores({
+      ...versionOneSchema,
+      dynamicApplets: '&widgetType, registeredAt',
+      widgetStates: '&widgetKey, sessionId, itemId, widgetId, updatedAt',
+    })
   }
 }
 
@@ -79,6 +86,10 @@ export function nowIso() {
 
 export function makePreviewId(prefix: string) {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`
+}
+
+export function makeWidgetStateKey(itemId: string, widgetId: string) {
+  return `${itemId}:${widgetId}`
 }
 
 function createDefaultAgent(): AhipPreviewAgent {
@@ -391,6 +402,24 @@ export async function loadDynamicApplets(): Promise<AhipDynamicAppletEntry[]> {
   return [...entries].sort((a, b) => a.registeredAt.localeCompare(b.registeredAt))
 }
 
+export async function saveWidgetState(entry: AhipWidgetStateEntry) {
+  await ensureDbOpen()
+  await ahipPreviewDb.widgetStates.put(entry)
+}
+
+export async function loadWidgetState(widgetKey: string): Promise<AhipWidgetStateEntry | undefined> {
+  if (typeof indexedDB === 'undefined') return undefined
+  await initAhipPreviewDb()
+  return ahipPreviewDb.widgetStates.get(widgetKey)
+}
+
+export async function loadWidgetStates(): Promise<AhipWidgetStateEntry[]> {
+  if (typeof indexedDB === 'undefined') return []
+  await initAhipPreviewDb()
+  const entries = await ahipPreviewDb.widgetStates.toArray()
+  return [...entries].sort((a, b) => a.updatedAt.localeCompare(b.updatedAt))
+}
+
 export async function saveSecret(agentId: string, apiKey: string) {
   await ensureDbOpen()
   await ahipPreviewDb.secrets.put({
@@ -417,6 +446,7 @@ export async function clearAhipPreviewDb() {
       ahipPreviewDb.providerTests,
       ahipPreviewDb.artifactOpenEvents,
       ahipPreviewDb.dynamicApplets,
+      ahipPreviewDb.widgetStates,
       ahipPreviewDb.secrets,
       ahipPreviewDb.meta,
     ],
@@ -429,6 +459,7 @@ export async function clearAhipPreviewDb() {
         ahipPreviewDb.providerTests.clear(),
         ahipPreviewDb.artifactOpenEvents.clear(),
         ahipPreviewDb.dynamicApplets.clear(),
+        ahipPreviewDb.widgetStates.clear(),
         ahipPreviewDb.secrets.clear(),
         ahipPreviewDb.meta.clear(),
       ])
@@ -463,6 +494,7 @@ function getWidgetTypesFromMessages(messages: Record<string, AhipPreviewMessage[
 export async function exportAhipPreviewData(scope: AhipPreviewExportScope): Promise<AhipPreviewExport> {
   const snapshot = await loadAhipPreviewSnapshot()
   const dynamicApplets = await loadDynamicApplets()
+  const widgetStates = await loadWidgetStates()
 
   if (scope.kind === 'all') {
     return {
@@ -476,6 +508,7 @@ export async function exportAhipPreviewData(scope: AhipPreviewExportScope): Prom
       providerTests: snapshot.providerTests,
       artifactOpenEvents: snapshot.artifactOpenEvents,
       dynamicApplets,
+      widgetStates,
     }
   }
 
@@ -499,5 +532,6 @@ export async function exportAhipPreviewData(scope: AhipPreviewExportScope): Prom
     ),
     artifactOpenEvents: filterRecordBySession(snapshot.artifactOpenEvents, sessionIds),
     dynamicApplets: dynamicApplets.filter((entry) => widgetTypes.has(entry.widgetType)),
+    widgetStates: widgetStates.filter((entry) => sessionIds.has(entry.sessionId)),
   }
 }
