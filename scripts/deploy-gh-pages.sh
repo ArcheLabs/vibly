@@ -3,7 +3,7 @@ set -euo pipefail
 
 remote="${REMOTE:-origin}"
 branch="${DEPLOY_BRANCH:-gh-pages}"
-base_path="${VITE_BASE_PATH:-/vibly/}"
+base_path="${VITE_BASE_PATH:-/}"
 build_dir="${BUILD_DIR:-dist}"
 message="${COMMIT_MESSAGE:-Deploy GitHub Pages}"
 
