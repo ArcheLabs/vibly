@@ -42,6 +42,14 @@ body {
   background-color: var(--accent-foreground);
 }
 
+.bg-danger {
+  background-color: var(--danger);
+}
+
+.bg-danger-foreground {
+  background-color: var(--danger-foreground);
+}
+
 .text-primary {
   color: var(--text-primary);
 }
@@ -62,6 +70,14 @@ body {
   color: var(--accent-foreground);
 }
 
+.text-danger {
+  color: var(--danger);
+}
+
+.text-danger-foreground {
+  color: var(--danger-foreground);
+}
+
 .border-default {
   border-color: var(--border-default);
 }
@@ -72,6 +88,10 @@ body {
 
 .border-accent {
   border-color: var(--accent);
+}
+
+.border-danger {
+  border-color: var(--danger);
 }
 
 .accent {

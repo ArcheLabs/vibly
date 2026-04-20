@@ -2,18 +2,64 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { AHIPWidgetRendererProps } from '@ahip/react'
 import { getDynamicApplet } from '@/modules/ahip-preview/dynamicAppletRegistry'
 import { registerWidgetListener } from '@/modules/ahip-preview/widgetActionBus'
+import { loadWidgetState, makeWidgetStateKey, nowIso, saveWidgetState } from '@/modules/ahip-preview/storage'
 
 const SANDBOX_FLAGS = 'allow-scripts'
-const DEFAULT_HEIGHT = 400
-const MAX_HEIGHT = 800
+const DEFAULT_HEIGHT = 560
+const DEFAULT_WIDTH = 760
+const MAX_HEIGHT = 1400
+const MAX_WIDTH = 1200
 const MIN_HEIGHT = 100
+const MIN_WIDTH = 320
 
 export function DynamicAppletRenderer({ widget, item, host, fallback }: AHIPWidgetRendererProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const [height, setHeight] = useState(DEFAULT_HEIGHT)
+  const [width, setWidth] = useState(DEFAULT_WIDTH)
   const [error, setError] = useState<string | null>(null)
 
   const applet = getDynamicApplet(widget.widget_type)
+  const widgetKey = makeWidgetStateKey(item.item_id, widget.widget_id)
+
+  const persistWidgetState = useCallback((state: unknown) => {
+    const sessionId = typeof item.session_id === 'string' ? item.session_id : 'unknown_session'
+    void saveWidgetState({
+      widgetKey,
+      sessionId,
+      itemId: item.item_id,
+      widgetId: widget.widget_id,
+      widgetType: widget.widget_type,
+      state,
+      updatedAt: nowIso(),
+    })
+  }, [item.item_id, item.session_id, widget.widget_id, widget.widget_type, widgetKey])
+
+  const restoreWidgetState = useCallback(async () => {
+    const iframe = iframeRef.current
+    if (!iframe?.contentWindow) return
+
+    const persisted = await loadWidgetState(widgetKey)
+    if (!persisted) return
+
+    const restorePayload = {
+      type: 'ahip_host_restore_state',
+      payload: {
+        state: persisted.state,
+        widget_id: widget.widget_id,
+        restored_at: nowIso(),
+      },
+    }
+
+    iframe.contentWindow.postMessage(restorePayload, '*')
+    iframe.contentWindow.postMessage(
+      {
+        type: 'ahip_host_action',
+        action: 'restore_state',
+        payload: restorePayload.payload,
+      },
+      '*',
+    )
+  }, [widget.widget_id, widgetKey])
 
   // Outbound: iframe → host
   const handleMessage = useCallback((event: MessageEvent) => {
@@ -23,7 +69,24 @@ export function DynamicAppletRenderer({ widget, item, host, fallback }: AHIPWidg
     const data = event.data
     if (!data || typeof data !== 'object') return
 
+    if (data.type === 'ahip_widget_state') {
+      const state = data.payload?.state ?? data.state ?? data.payload
+      if (state !== undefined) persistWidgetState(state)
+      return
+    }
+
     if (data.type === 'ahip_widget_action' && data.payload) {
+      const state =
+        data.payload.widget_state ??
+        data.payload.state ??
+        (data.payload.board_state
+          ? {
+              board_state: data.payload.board_state,
+              last_action: data.payload,
+            }
+          : undefined)
+      if (state !== undefined) persistWidgetState(state)
+
       host.actionDispatcher?.dispatchAction(
         {
           id: `dynamic_${Date.now()}`,
@@ -41,7 +104,7 @@ export function DynamicAppletRenderer({ widget, item, host, fallback }: AHIPWidg
     if (data.type === 'ahip_widget_resize' && typeof data.height === 'number') {
       setHeight(Math.min(Math.max(data.height, MIN_HEIGHT), MAX_HEIGHT))
     }
-  }, [host, widget, item])
+  }, [host, widget, item, persistWidgetState])
 
   useEffect(() => {
     window.addEventListener('message', handleMessage)
@@ -51,6 +114,9 @@ export function DynamicAppletRenderer({ widget, item, host, fallback }: AHIPWidg
   // Inbound: host → iframe (via widget action bus)
   useEffect(() => {
     const unregister = registerWidgetListener(widget.widget_id, (action) => {
+      if (action.payload?.widget_state !== undefined) {
+        persistWidgetState(action.payload.widget_state)
+      }
       const iframe = iframeRef.current
       if (!iframe?.contentWindow) return
       iframe.contentWindow.postMessage(
@@ -63,10 +129,15 @@ export function DynamicAppletRenderer({ widget, item, host, fallback }: AHIPWidg
       )
     })
     return unregister
-  }, [widget.widget_id])
+  }, [persistWidgetState, widget.widget_id])
 
   if (!applet) {
-    return <>{fallback}</>
+    return (
+      <div className="rounded-md border border-default bg-muted px-3 py-2 text-xs text-secondary">
+        Applet renderer is not available locally. Regenerate applet.
+        <div className="mt-2">{fallback}</div>
+      </div>
+    )
   }
 
   if (error) {
@@ -81,17 +152,39 @@ export function DynamicAppletRenderer({ widget, item, host, fallback }: AHIPWidg
     <section className="space-y-2" data-ahip-widget={widget.widget_type}>
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold text-primary">{applet.displayName}</p>
-        <span className="rounded bg-accent/10 px-1.5 py-0.5 text-[10px] text-accent">dynamic applet</span>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-muted">Drag the corner to resize</span>
+          <span className="rounded bg-accent/10 px-1.5 py-0.5 text-[10px] text-accent">dynamic applet</span>
+        </div>
       </div>
-      <iframe
-        ref={iframeRef}
-        srcDoc={applet.htmlSource}
-        sandbox={SANDBOX_FLAGS}
-        title={applet.displayName}
-        className="w-full rounded border border-default"
-        style={{ height: `${height}px`, border: 'none' }}
-        onError={() => setError('Failed to load applet.')}
-      />
+      <div
+        className="max-w-full overflow-auto rounded border border-default bg-surface"
+        style={{
+          height: `${height}px`,
+          width: `min(100%, ${width}px)`,
+          maxHeight: `${MAX_HEIGHT}px`,
+          maxWidth: '100%',
+          minHeight: `${MIN_HEIGHT}px`,
+          minWidth: `${MIN_WIDTH}px`,
+          resize: 'both',
+        }}
+        onPointerUp={(event) => {
+          const rect = event.currentTarget.getBoundingClientRect()
+          setHeight(Math.min(Math.max(Math.round(rect.height), MIN_HEIGHT), MAX_HEIGHT))
+          setWidth(Math.min(Math.max(Math.round(rect.width), MIN_WIDTH), MAX_WIDTH))
+        }}
+      >
+        <iframe
+          ref={iframeRef}
+          srcDoc={applet.htmlSource}
+          sandbox={SANDBOX_FLAGS}
+          title={applet.displayName}
+          className="h-full w-full"
+          style={{ border: 'none' }}
+          onLoad={() => { void restoreWidgetState() }}
+          onError={() => setError('Failed to load applet.')}
+        />
+      </div>
     </section>
   )
 }

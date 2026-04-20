@@ -14,7 +14,7 @@ type I18nContextValue = {
 const I18nContext = createContext<I18nContextValue | null>(null)
 
 function detectLocale(): Locale {
-  if (typeof window === 'undefined') return 'zh-CN'
+  if (typeof window === 'undefined') return 'en-US'
   const saved = window.localStorage.getItem(STORAGE_KEY)
   if (saved === 'zh-CN' || saved === 'en-US') return saved
   return window.navigator.language.startsWith('zh') ? 'zh-CN' : 'en-US'

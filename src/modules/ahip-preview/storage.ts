@@ -1,12 +1,14 @@
 import Dexie, { type Table } from 'dexie'
 import type {
   AhipArtifactOpenEvent,
+  AhipDynamicAppletEntry,
   AhipPreviewAgent,
   AhipPreviewExport,
   AhipPreviewExportScope,
   AhipPreviewMessage,
   AhipPreviewSecrets,
   AhipPreviewSession,
+  AhipWidgetStateEntry,
   AhipPreviewState,
   AhipProviderTest,
   AhipRuntimeTrace,
@@ -38,13 +40,15 @@ class AhipPreviewDB extends Dexie {
   runtimeTraces!: Table<AhipRuntimeTrace, string>
   providerTests!: Table<AhipProviderTest & { agentId: string }, string>
   artifactOpenEvents!: Table<AhipArtifactOpenEvent, string>
+  dynamicApplets!: Table<AhipDynamicAppletEntry, string>
+  widgetStates!: Table<AhipWidgetStateEntry, string>
   secrets!: Table<SecretRecord, string>
   meta!: Table<MetaRecord, string>
 
   constructor() {
     super(DB_NAME)
 
-    this.version(1).stores({
+    const versionOneSchema = {
       agents: '&agentId, updatedAt',
       sessions: '&sessionId, agentId, updatedAt',
       messages: '&messageId, sessionId, createdAt',
@@ -53,6 +57,17 @@ class AhipPreviewDB extends Dexie {
       artifactOpenEvents: '&eventId, sessionId, openedAt',
       secrets: '&agentId, updatedAt',
       meta: '&key',
+    }
+
+    this.version(1).stores(versionOneSchema)
+    this.version(2).stores({
+      ...versionOneSchema,
+      dynamicApplets: '&widgetType, registeredAt',
+    })
+    this.version(3).stores({
+      ...versionOneSchema,
+      dynamicApplets: '&widgetType, registeredAt',
+      widgetStates: '&widgetKey, sessionId, itemId, widgetId, updatedAt',
     })
   }
 }
@@ -71,6 +86,10 @@ export function nowIso() {
 
 export function makePreviewId(prefix: string) {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`
+}
+
+export function makeWidgetStateKey(itemId: string, widgetId: string) {
+  return `${itemId}:${widgetId}`
 }
 
 function createDefaultAgent(): AhipPreviewAgent {
@@ -365,6 +384,42 @@ export async function appendArtifactOpenEvent(event: AhipArtifactOpenEvent) {
   await ahipPreviewDb.artifactOpenEvents.put(event)
 }
 
+export async function saveDynamicApplet(entry: AhipDynamicAppletEntry) {
+  await ensureDbOpen()
+  await ahipPreviewDb.dynamicApplets.put(entry)
+}
+
+export async function saveDynamicApplets(entries: AhipDynamicAppletEntry[]) {
+  if (!entries.length) return
+  await ensureDbOpen()
+  await ahipPreviewDb.dynamicApplets.bulkPut(entries)
+}
+
+export async function loadDynamicApplets(): Promise<AhipDynamicAppletEntry[]> {
+  if (typeof indexedDB === 'undefined') return []
+  await initAhipPreviewDb()
+  const entries = await ahipPreviewDb.dynamicApplets.toArray()
+  return [...entries].sort((a, b) => a.registeredAt.localeCompare(b.registeredAt))
+}
+
+export async function saveWidgetState(entry: AhipWidgetStateEntry) {
+  await ensureDbOpen()
+  await ahipPreviewDb.widgetStates.put(entry)
+}
+
+export async function loadWidgetState(widgetKey: string): Promise<AhipWidgetStateEntry | undefined> {
+  if (typeof indexedDB === 'undefined') return undefined
+  await initAhipPreviewDb()
+  return ahipPreviewDb.widgetStates.get(widgetKey)
+}
+
+export async function loadWidgetStates(): Promise<AhipWidgetStateEntry[]> {
+  if (typeof indexedDB === 'undefined') return []
+  await initAhipPreviewDb()
+  const entries = await ahipPreviewDb.widgetStates.toArray()
+  return [...entries].sort((a, b) => a.updatedAt.localeCompare(b.updatedAt))
+}
+
 export async function saveSecret(agentId: string, apiKey: string) {
   await ensureDbOpen()
   await ahipPreviewDb.secrets.put({
@@ -390,6 +445,8 @@ export async function clearAhipPreviewDb() {
       ahipPreviewDb.runtimeTraces,
       ahipPreviewDb.providerTests,
       ahipPreviewDb.artifactOpenEvents,
+      ahipPreviewDb.dynamicApplets,
+      ahipPreviewDb.widgetStates,
       ahipPreviewDb.secrets,
       ahipPreviewDb.meta,
     ],
@@ -401,6 +458,8 @@ export async function clearAhipPreviewDb() {
         ahipPreviewDb.runtimeTraces.clear(),
         ahipPreviewDb.providerTests.clear(),
         ahipPreviewDb.artifactOpenEvents.clear(),
+        ahipPreviewDb.dynamicApplets.clear(),
+        ahipPreviewDb.widgetStates.clear(),
         ahipPreviewDb.secrets.clear(),
         ahipPreviewDb.meta.clear(),
       ])
@@ -423,8 +482,19 @@ function filterRecordBySession<T>(record: Record<string, T[]>, sessionIds: Set<s
   return Object.fromEntries(Object.entries(record).filter(([sessionId]) => sessionIds.has(sessionId)))
 }
 
+function getWidgetTypesFromMessages(messages: Record<string, AhipPreviewMessage[]>) {
+  const widgetTypes = new Set<string>()
+  Object.values(messages).flat().forEach((message) => {
+    if (message.kind !== 'ahip') return
+    message.item.widgets?.forEach((widget) => widgetTypes.add(widget.widget_type))
+  })
+  return widgetTypes
+}
+
 export async function exportAhipPreviewData(scope: AhipPreviewExportScope): Promise<AhipPreviewExport> {
   const snapshot = await loadAhipPreviewSnapshot()
+  const dynamicApplets = await loadDynamicApplets()
+  const widgetStates = await loadWidgetStates()
 
   if (scope.kind === 'all') {
     return {
@@ -437,6 +507,8 @@ export async function exportAhipPreviewData(scope: AhipPreviewExportScope): Prom
       runtimeTraces: snapshot.runtimeTraces,
       providerTests: snapshot.providerTests,
       artifactOpenEvents: snapshot.artifactOpenEvents,
+      dynamicApplets,
+      widgetStates,
     }
   }
 
@@ -444,17 +516,22 @@ export async function exportAhipPreviewData(scope: AhipPreviewExportScope): Prom
   const sessionIds = new Set([scope.sessionId])
   const agentIds = new Set(session ? [session.agentId] : [])
 
+  const messages = filterRecordBySession(snapshot.messages, sessionIds)
+  const widgetTypes = getWidgetTypesFromMessages(messages)
+
   return {
     schemaVersion: 1,
     exportedAt: nowIso(),
     scope,
     agents: snapshot.agents.filter((agent) => agentIds.has(agent.agentId)),
     sessions: session ? [session] : [],
-    messages: filterRecordBySession(snapshot.messages, sessionIds),
+    messages,
     runtimeTraces: filterRecordBySession(snapshot.runtimeTraces, sessionIds),
     providerTests: Object.fromEntries(
       Object.entries(snapshot.providerTests).filter(([agentId]) => agentIds.has(agentId)),
     ),
     artifactOpenEvents: filterRecordBySession(snapshot.artifactOpenEvents, sessionIds),
+    dynamicApplets: dynamicApplets.filter((entry) => widgetTypes.has(entry.widgetType)),
+    widgetStates: widgetStates.filter((entry) => sessionIds.has(entry.sessionId)),
   }
 }

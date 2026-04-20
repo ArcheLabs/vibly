@@ -21,7 +21,7 @@ export function ListPanel({
 
   const panel = (
     <aside
-      className={cn('flex w-[320px] shrink-0 flex-col border-r border-default bg-panel', className)}
+      className={cn('flex h-screen max-h-screen w-[320px] shrink-0 flex-col overflow-hidden border-r border-default bg-panel', className)}
       onClickCapture={(event) => {
         if (!isMobile) return
         const target = event.target as HTMLElement
@@ -30,13 +30,18 @@ export function ListPanel({
         }
       }}
     >
-      {header ? <div className={cn('border-b border-default p-3', headerClassName)}>{header}</div> : null}
+      {header ? <div className={cn('shrink-0 border-b border-default p-3', headerClassName)}>{header}</div> : null}
       <div className={cn('min-h-0 flex-1 overflow-y-auto', contentClassName)}>{children}</div>
     </aside>
   )
 
   if (!isMobile) {
-    return panel
+    return (
+      <>
+        <div className="hidden w-[320px] shrink-0 lg:block" aria-hidden="true" />
+        <div className="fixed inset-y-0 left-[76px] z-30 hidden lg:block">{panel}</div>
+      </>
+    )
   }
 
   return (

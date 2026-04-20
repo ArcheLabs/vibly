@@ -9,7 +9,7 @@ const APPLET_GEN_TIMEOUT_MS = 3 * 60_000
 const APPLET_MAX_OUTPUT_TOKENS = 8192
 
 function buildAppletGenerationPrompt(intent: ToolIntent) {
-  const appletName = intent.proposed_args?.requested_applet ?? intent.title ?? 'Applet'
+  const appletName = resolveAppletName(intent)
   const stateSchema = intent.proposed_args?.state_schema
     ? JSON.stringify(intent.proposed_args.state_schema, null, 2)
     : null
@@ -34,9 +34,13 @@ function buildAppletGenerationPrompt(intent: ToolIntent) {
     '  } }, "*")',
     '- Inbound from host (AI response): addEventListener("message", e => {',
     '    if (e.data?.type === "ahip_host_action") handleHostAction(e.data.action, e.data.payload)',
+    '    if (e.data?.type === "ahip_host_restore_state") restoreState(e.data.payload.state)',
     '  })',
     '  The host will send { type: "ahip_host_action", action: "ai_move", payload: { move: "e7e5", ... } }',
     '  Apply the AI move to the board and update the display.',
+    '- State persistence: after every state change, send a serializable snapshot:',
+    '  parent.postMessage({ type: "ahip_widget_state", payload: { state: getSerializableState() } }, "*")',
+    '- On restore_state or ahip_host_restore_state, rebuild the UI from the provided state snapshot.',
     '- Resize: parent.postMessage({ type: "ahip_widget_resize", height: document.body.scrollHeight }, "*")',
     '- Call resize after initial render and after layout changes.',
     '',
@@ -179,7 +183,7 @@ export async function executeRegisterApplet(
 
     const html = sanitizeAppletHtml(extractHtmlDocument(fullText))
 
-    registerDynamicApplet({
+    await registerDynamicApplet({
       widgetType,
       displayName: appletName,
       htmlSource: html,

@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { assertValidAHIPItem } from '@ahip/core'
+import {
+  clearDynamicApplets,
+  hasDynamicApplet,
+  hydrateDynamicAppletsFromDb,
+  registerDynamicApplet,
+} from './dynamicAppletRegistry'
 import { createScenarioFixtures } from './scenarioMatrix'
 import {
   ahipPreviewDb,
@@ -16,12 +22,19 @@ import {
   resetAhipPreviewDb,
   saveAhipPreviewSecrets,
   saveAhipPreviewState,
+  loadDynamicApplets,
+  loadWidgetState,
+  loadWidgetStates,
+  makeWidgetStateKey,
   saveProviderTest,
   saveSecret,
+  saveWidgetState,
 } from './storage'
 
 afterEach(async () => {
   window.localStorage.clear()
+  window.sessionStorage.clear()
+  clearDynamicApplets()
   await ahipPreviewDb.delete()
 })
 
@@ -104,6 +117,70 @@ describe('AHIP preview IndexedDB storage', () => {
     expect((await loadSecrets()).apiKeysByAgentId.agent_ahip_preview).toBeUndefined()
   })
 
+  it('persists dynamic applets in IndexedDB for later hydration', async () => {
+    await resetAhipPreviewDb()
+    await registerDynamicApplet({
+      widgetType: 'dev.vibly/dynamic_chess',
+      displayName: 'Chess',
+      htmlSource: '<!DOCTYPE html><html><body>Chess board</body></html>',
+      registeredAt: new Date(0).toISOString(),
+    })
+
+    expect((await loadDynamicApplets())[0]?.widgetType).toBe('dev.vibly/dynamic_chess')
+
+    clearDynamicApplets()
+    expect(hasDynamicApplet('dev.vibly/dynamic_chess')).toBe(false)
+
+    await hydrateDynamicAppletsFromDb()
+    expect(hasDynamicApplet('dev.vibly/dynamic_chess')).toBe(true)
+  })
+
+  it('persists dynamic widget state snapshots separately from AHIP messages', async () => {
+    await resetAhipPreviewDb()
+    const widgetKey = makeWidgetStateKey('item_chess', 'chess_widget')
+
+    await saveWidgetState({
+      widgetKey,
+      sessionId: 'session_ahip_preview',
+      itemId: 'item_chess',
+      widgetId: 'chess_widget',
+      widgetType: 'dev.vibly/dynamic_chess',
+      state: {
+        turn: 'black',
+        moves: ['e2e4', 'e7e5'],
+      },
+      updatedAt: new Date(0).toISOString(),
+    })
+
+    const restored = await loadWidgetState(widgetKey)
+    const allStates = await loadWidgetStates()
+
+    expect(restored?.state).toMatchObject({ turn: 'black' })
+    expect(allStates.some((entry) => entry.widgetKey === widgetKey)).toBe(true)
+    expect(JSON.stringify(await loadAhipPreviewSnapshot())).not.toContain('e2e4')
+  })
+
+  it('migrates legacy sessionStorage dynamic applets into IndexedDB', async () => {
+    await resetAhipPreviewDb()
+    clearDynamicApplets()
+    window.sessionStorage.setItem(
+      'ahip_dynamic_applets',
+      JSON.stringify([
+        {
+          widgetType: 'dev.vibly/dynamic_legacy_chess',
+          displayName: 'Legacy Chess',
+          htmlSource: '<!DOCTYPE html><html><body>Legacy board</body></html>',
+          registeredAt: new Date(0).toISOString(),
+        },
+      ]),
+    )
+
+    await hydrateDynamicAppletsFromDb()
+
+    expect(hasDynamicApplet('dev.vibly/dynamic_legacy_chess')).toBe(true)
+    expect((await loadDynamicApplets()).some((entry) => entry.widgetType === 'dev.vibly/dynamic_legacy_chess')).toBe(true)
+  })
+
   it('migrates legacy localStorage state and secrets once', async () => {
     const legacyState = createDefaultAhipPreviewState()
     saveAhipPreviewState(legacyState)
@@ -134,6 +211,51 @@ describe('AHIP preview IndexedDB storage', () => {
     const state = await resetAhipPreviewDb()
     const sessionId = state.selectedSessionId ?? 'session_ahip_preview'
     await saveSecret('agent_ahip_preview', 'sk-export-secret')
+    await registerDynamicApplet({
+      widgetType: 'dev.vibly/dynamic_export_chess',
+      displayName: 'Export Chess',
+      htmlSource: '<!DOCTYPE html><html><body>Export board</body></html>',
+      registeredAt: new Date(0).toISOString(),
+    })
+    await appendMessage({
+      messageId: 'msg_dynamic_export_chess',
+      sessionId,
+      role: 'assistant',
+      kind: 'ahip',
+      createdAt: new Date(0).toISOString(),
+      item: assertValidAHIPItem({
+        protocol: 'ahip',
+        version: '0.2',
+        item_id: 'item_dynamic_export_chess',
+        session_id: sessionId,
+        kind: 'turn',
+        actor: {
+          actor_id: 'host',
+          actor_kind: 'system',
+          display_name: 'Host',
+        },
+        created_at: new Date(0).toISOString(),
+        fallback_text: 'Export Chess widget',
+        content: [
+          {
+            id: 'block_dynamic_export_chess',
+            type: 'status',
+            status: 'idle',
+            message: 'Export Chess ready',
+          },
+        ],
+        widgets: [
+          {
+            id: 'widget_dynamic_export_chess_ref',
+            widget_id: 'dynamic_export_chess_widget',
+            widget_type: 'dev.vibly/dynamic_export_chess',
+            props: {},
+            permissions: { network: 'none', clipboard: false, wallet: false, storage: 'session' },
+            fallback_text: 'Export Chess widget fallback',
+          },
+        ],
+      }),
+    })
     await appendRuntimeTrace({
       traceId: 'trace_export',
       sessionId,
@@ -149,12 +271,25 @@ describe('AHIP preview IndexedDB storage', () => {
       validationErrors: [],
       finalMessageKind: 'text',
     })
+    await saveWidgetState({
+      widgetKey: makeWidgetStateKey('item_dynamic_export_chess', 'dynamic_export_chess_widget'),
+      sessionId,
+      itemId: 'item_dynamic_export_chess',
+      widgetId: 'dynamic_export_chess_widget',
+      widgetType: 'dev.vibly/dynamic_export_chess',
+      state: { moves: ['e2e4'] },
+      updatedAt: new Date(0).toISOString(),
+    })
 
     const exportedSession = await exportAhipPreviewData({ kind: 'session', sessionId })
     const exportedAll = await exportAhipPreviewData({ kind: 'all' })
 
     expect(exportedSession.sessions).toHaveLength(1)
     expect(exportedAll.agents.length).toBeGreaterThan(0)
+    expect(exportedSession.dynamicApplets.some((entry) => entry.widgetType === 'dev.vibly/dynamic_export_chess')).toBe(true)
+    expect(exportedAll.dynamicApplets.some((entry) => entry.widgetType === 'dev.vibly/dynamic_export_chess')).toBe(true)
+    expect(exportedSession.widgetStates.some((entry) => entry.widgetId === 'dynamic_export_chess_widget')).toBe(true)
+    expect(exportedAll.widgetStates.some((entry) => entry.widgetId === 'dynamic_export_chess_widget')).toBe(true)
     expect(JSON.stringify(exportedSession)).not.toContain('sk-export-secret')
     expect(JSON.stringify(exportedAll)).not.toContain('sk-export-secret')
   })

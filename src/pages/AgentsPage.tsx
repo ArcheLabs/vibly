@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Plus } from 'lucide-react'
+import { AgentListItem } from '@/components/agents/AgentListItem'
 import { EmptyState } from '@/components/common/EmptyState'
 import { ListPanel } from '@/components/layout/ListPanel'
 import { MainPanel } from '@/components/layout/MainPanel'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { Dialog } from '@/components/ui/Dialog'
 import { Input } from '@/components/ui/Input'
 import { SearchBar } from '@/components/ui/SearchBar'
-import { cn } from '@/lib/utils'
+import { toPreviewAgentListItem } from '@/modules/ahip-preview/agentListAdapter'
 import { useAhipPreview } from '@/modules/ahip-preview/provider'
 import type { AhipPreviewProviderKind } from '@/modules/ahip-preview/types'
 
@@ -114,7 +116,7 @@ export function AgentsPage() {
               <Button
                 size="sm"
                 variant="accent"
-                onClick={() => setCreating((open) => !open)}
+                onClick={() => setCreating(true)}
                 className="h-9 w-9 shrink-0 rounded-full px-0"
                 aria-label="Create agent"
               >
@@ -124,65 +126,18 @@ export function AgentsPage() {
           </div>
         }
       >
-        {creating ? (
-          <div className="space-y-2 border-b border-default bg-muted/40 p-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">New AHIP agent</p>
-            <Input value={newAgentName} onChange={(e) => setNewAgentName(e.target.value)} placeholder="Agent name" />
-            <Input value={newBio} onChange={(e) => setNewBio(e.target.value)} placeholder="Short bio (optional)" />
-            <select
-              className="h-10 w-full rounded-md border border-default bg-surface px-3 text-sm text-primary outline-none"
-              value={newProvider}
-              onChange={(e) => setNewProvider(e.target.value as AhipPreviewProviderKind)}
-            >
-              {providerOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-            <Input value={newBaseUrl} onChange={(e) => setNewBaseUrl(e.target.value)} placeholder="Base URL" />
-            <Input value={newModel} onChange={(e) => setNewModel(e.target.value)} placeholder="Model" />
-            <Input value={newApiKey} onChange={(e) => setNewApiKey(e.target.value)} placeholder="API key (local BYOK)" type="password" />
-            <textarea
-              value={newSystemPrompt}
-              onChange={(e) => setNewSystemPrompt(e.target.value)}
-              className="min-h-[84px] w-full rounded-md border border-default bg-surface px-3 py-2 text-sm text-primary outline-none"
-              placeholder="System prompt"
-            />
-            <div className="flex gap-2">
-              <Button variant="accent" className="flex-1" onClick={handleCreateAgent}>
-                Create
-              </Button>
-              <Button variant="outline" onClick={() => setCreating(false)}>
-                Cancel
-              </Button>
-            </div>
-          </div>
-        ) : null}
         {visibleAgents.length > 0 ? (
           <div>
             {visibleAgents.map((agent) => {
               const active = agent.agentId === focusedAgent?.agentId
-              const hasKey = Boolean(secrets.apiKeysByAgentId[agent.agentId])
 
               return (
-                <button
+                <AgentListItem
                   key={agent.agentId}
-                  type="button"
+                  agent={toPreviewAgentListItem(agent)}
+                  active={active}
                   onClick={() => setFocusedAgentId(agent.agentId)}
-                  className={cn(
-                    'flex w-full items-start gap-3 border-b border-default px-3 py-3 text-left transition',
-                    active ? 'bg-muted' : 'bg-surface hover-bg-muted',
-                  )}
-                >
-                  <Avatar label={agent.name} src={agent.avatar} tone="agent" />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-primary">{agent.name}</p>
-                    <p className="mt-0.5 truncate text-xs text-muted">{agent.bio || agent.model}</p>
-                    <div className="mt-1.5 flex flex-wrap gap-1">
-                      <Badge label={agent.provider} variant="default" />
-                      <Badge label={hasKey ? 'LangGraph' : 'Local'} variant={hasKey ? 'accent' : 'muted'} />
-                    </div>
-                  </div>
-                </button>
+                />
               )
             })}
           </div>
@@ -194,6 +149,73 @@ export function AgentsPage() {
           />
         )}
       </ListPanel>
+
+      <Dialog
+        open={creating}
+        title="New AHIP agent"
+        description="Add a local preview agent. API keys stay in this browser only."
+        onClose={() => setCreating(false)}
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setCreating(false)}>
+              Cancel
+            </Button>
+            <Button variant="accent" onClick={handleCreateAgent}>
+              Create
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-3">
+          <label className="block text-sm text-secondary">
+            Agent name
+            <Input className="mt-2" value={newAgentName} onChange={(e) => setNewAgentName(e.target.value)} placeholder="Agent name" />
+          </label>
+          <label className="block text-sm text-secondary">
+            Bio
+            <Input className="mt-2" value={newBio} onChange={(e) => setNewBio(e.target.value)} placeholder="Short bio (optional)" />
+          </label>
+          <label className="block text-sm text-secondary">
+            Provider
+            <select
+              className="mt-2 h-10 w-full rounded-md border border-default bg-surface px-3 text-sm text-primary outline-none focus-border-strong"
+              value={newProvider}
+              onChange={(e) => setNewProvider(e.target.value as AhipPreviewProviderKind)}
+            >
+              {providerOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-sm text-secondary">
+            Base URL
+            <Input className="mt-2" value={newBaseUrl} onChange={(e) => setNewBaseUrl(e.target.value)} placeholder="Base URL" />
+          </label>
+          <label className="block text-sm text-secondary">
+            Model
+            <Input className="mt-2" value={newModel} onChange={(e) => setNewModel(e.target.value)} placeholder="Model" />
+          </label>
+          <label className="block text-sm text-secondary">
+            API key
+            <Input
+              className="mt-2"
+              value={newApiKey}
+              onChange={(e) => setNewApiKey(e.target.value)}
+              placeholder="API key (local BYOK)"
+              type="password"
+            />
+          </label>
+          <label className="block text-sm text-secondary">
+            System prompt
+            <textarea
+              value={newSystemPrompt}
+              onChange={(e) => setNewSystemPrompt(e.target.value)}
+              className="mt-2 min-h-[96px] w-full rounded-md border border-default bg-surface px-3 py-2 text-sm text-primary outline-none focus-border-strong"
+              placeholder="System prompt"
+            />
+          </label>
+        </div>
+      </Dialog>
 
       <MainPanel>
         {focusedAgent ? (
@@ -287,12 +309,13 @@ export function AgentsPage() {
                     onChange={(e) => updateAgentApiKey(focusedAgent.agentId, e.target.value)}
                   />
                 </label>
-                <div className="flex flex-wrap gap-2">
-                  <Button variant="outline" onClick={() => deleteAgentApiKey(focusedAgent.agentId)}>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button variant="danger" onClick={() => deleteAgentApiKey(focusedAgent.agentId)}>
                     Clear key
                   </Button>
                   <Button
-                    variant="outline"
+                    variant="accent"
+                    className="ml-auto"
                     disabled={focusedProviderTest.status === 'testing' || hydrating}
                     onClick={() => {
                       // Make sure this agent is selected so the test applies
@@ -301,7 +324,7 @@ export function AgentsPage() {
                       void testProvider(focusedAgent.agentId)
                     }}
                   >
-                    {focusedProviderTest.status === 'testing' ? 'Testing...' : 'Test provider'}
+                    {focusedProviderTest.status === 'testing' ? 'Checking...' : 'Confirm'}
                   </Button>
                 </div>
                 {focusedProviderTest.status !== 'idle' ? (

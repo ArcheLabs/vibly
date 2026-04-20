@@ -1,4 +1,4 @@
-import { Sparkles } from 'lucide-react'
+import viblyLogo from '@/assets/vibly.png'
 import { NotificationCenter } from '@/components/system/NotificationCenter'
 import { ThemeToggle } from '@/components/theme/ThemeToggle'
 import { useI18n } from '@/i18n'
@@ -34,9 +34,7 @@ export function SideNav({
 
   return (
     <nav className="flex h-screen w-[76px] shrink-0 flex-col items-center border-r border-default bg-panel px-2 py-4">
-      <div className="flex aspect-square h-12 items-center justify-center rounded-full bg-secondary text-secondary">
-        <Sparkles className="h-6 w-6" />
-      </div>
+      <img src={viblyLogo} alt="Vibly" className="h-12 w-12 rounded-lg object-contain" />
       <div className="mt-6 flex w-full flex-1 flex-col gap-2">
         {navItems.map((item) => {
           const Icon = item.icon
