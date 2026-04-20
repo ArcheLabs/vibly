@@ -18,6 +18,16 @@ export const AHIP_PREVIEW_SCENARIO_EXTENSION_KEY = 'dev.vibly/scenario_id'
 
 type Stone = 'black' | 'white' | null
 type GomokuBoard = Stone[][]
+type GomokuPoint = { row: number; col: number }
+
+const GOMOKU_SIZE = 15
+const GOMOKU_CENTER = Math.floor(GOMOKU_SIZE / 2)
+const GOMOKU_DIRECTIONS = [
+  [1, 0],
+  [0, 1],
+  [1, 1],
+  [1, -1],
+] as const
 
 const PREVIEW_AGENT_ACTOR: AHIPActor = {
   actor_id: 'agent_ahip_preview',
@@ -506,11 +516,13 @@ function createUnsupportedFallbackItem(sessionId: string): AHIPItem {
 }
 
 function emptyBoard(): GomokuBoard {
-  return Array.from({ length: 15 }, () => Array.from({ length: 15 }, () => null as Stone))
+  return Array.from({ length: GOMOKU_SIZE }, () => Array.from({ length: GOMOKU_SIZE }, () => null as Stone))
 }
 
 function createGomokuItem(sessionId: string, board = emptyBoard(), note = 'Your turn.'): AHIPItem {
   const scenarioId = 'gomoku_widget'
+  const winner = findGomokuWinner(board)
+  const terminal = Boolean(winner) || isBoardFull(board)
   return validItem({
     ...baseItem(sessionId, scenarioId, 'Gomoku board preview.'),
     content: [
@@ -518,7 +530,7 @@ function createGomokuItem(sessionId: string, board = emptyBoard(), note = 'Your 
         id: makePreviewId('block'),
         type: 'status',
         title: 'Stateful interaction',
-        status: 'waiting',
+        status: terminal ? 'done' : 'waiting',
         message: note,
       },
     ],
@@ -532,6 +544,8 @@ function createGomokuItem(sessionId: string, board = emptyBoard(), note = 'Your 
           humanStone: 'black',
           agentStone: 'white',
           note,
+          winner,
+          terminal,
         },
         fallback_text: 'Gomoku board: use an AHIP-capable host to place stones.',
       },
@@ -772,19 +786,155 @@ function getBoardFromItem(item: AHIPItem): GomokuBoard {
   return emptyBoard()
 }
 
-function findAgentMove(board: GomokuBoard) {
-  const center = 7
-  if (!board[center]?.[center]) return { row: center, col: center }
+function isInBounds(row: number, col: number) {
+  return row >= 0 && row < GOMOKU_SIZE && col >= 0 && col < GOMOKU_SIZE
+}
 
-  for (let radius = 1; radius < board.length; radius += 1) {
-    for (let row = Math.max(0, center - radius); row <= Math.min(14, center + radius); row += 1) {
-      for (let col = Math.max(0, center - radius); col <= Math.min(14, center + radius); col += 1) {
-        if (!board[row]?.[col]) return { row, col }
-      }
+function isValidGomokuPoint(row: number, col: number) {
+  return Number.isInteger(row) && Number.isInteger(col) && isInBounds(row, col)
+}
+
+function countDirection(board: GomokuBoard, row: number, col: number, stone: Exclude<Stone, null>, rowStep: number, colStep: number) {
+  let count = 0
+  let currentRow = row + rowStep
+  let currentCol = col + colStep
+
+  while (isInBounds(currentRow, currentCol) && board[currentRow]?.[currentCol] === stone) {
+    count += 1
+    currentRow += rowStep
+    currentCol += colStep
+  }
+
+  return count
+}
+
+function hasFiveFrom(board: GomokuBoard, row: number, col: number, stone: Exclude<Stone, null>) {
+  return GOMOKU_DIRECTIONS.some(([rowStep, colStep]) => (
+    1 +
+      countDirection(board, row, col, stone, rowStep, colStep) +
+      countDirection(board, row, col, stone, -rowStep, -colStep) >= 5
+  ))
+}
+
+function findGomokuWinner(board: GomokuBoard): Exclude<Stone, null> | null {
+  for (let row = 0; row < GOMOKU_SIZE; row += 1) {
+    for (let col = 0; col < GOMOKU_SIZE; col += 1) {
+      const stone = board[row]?.[col]
+      if (stone && hasFiveFrom(board, row, col, stone)) return stone
     }
   }
 
   return null
+}
+
+function isBoardFull(board: GomokuBoard) {
+  return board.every((row) => row.every(Boolean))
+}
+
+function wouldWin(board: GomokuBoard, point: GomokuPoint, stone: Exclude<Stone, null>) {
+  board[point.row][point.col] = stone
+  const wins = hasFiveFrom(board, point.row, point.col, stone)
+  board[point.row][point.col] = null
+  return wins
+}
+
+function hasNeighbor(board: GomokuBoard, row: number, col: number, radius = 2) {
+  for (let rowOffset = -radius; rowOffset <= radius; rowOffset += 1) {
+    for (let colOffset = -radius; colOffset <= radius; colOffset += 1) {
+      if (rowOffset === 0 && colOffset === 0) continue
+      const candidateRow = row + rowOffset
+      const candidateCol = col + colOffset
+      if (isInBounds(candidateRow, candidateCol) && board[candidateRow]?.[candidateCol]) return true
+    }
+  }
+
+  return false
+}
+
+function distanceFromCenter(point: GomokuPoint) {
+  return Math.abs(point.row - GOMOKU_CENTER) + Math.abs(point.col - GOMOKU_CENTER)
+}
+
+function candidateMoves(board: GomokuBoard): GomokuPoint[] {
+  const points: GomokuPoint[] = []
+  let hasStone = false
+
+  for (let row = 0; row < GOMOKU_SIZE; row += 1) {
+    for (let col = 0; col < GOMOKU_SIZE; col += 1) {
+      if (board[row]?.[col]) {
+        hasStone = true
+        continue
+      }
+
+      if (hasNeighbor(board, row, col)) {
+        points.push({ row, col })
+      }
+    }
+  }
+
+  if (!hasStone && !board[GOMOKU_CENTER]?.[GOMOKU_CENTER]) return [{ row: GOMOKU_CENTER, col: GOMOKU_CENTER }]
+
+  return points.sort((left, right) => distanceFromCenter(left) - distanceFromCenter(right))
+}
+
+function lineScore(length: number, openEnds: number) {
+  if (length >= 5) return 1_000_000
+  if (length === 4 && openEnds === 2) return 100_000
+  if (length === 4 && openEnds === 1) return 25_000
+  if (length === 3 && openEnds === 2) return 8_000
+  if (length === 3 && openEnds === 1) return 1_200
+  if (length === 2 && openEnds === 2) return 450
+  if (length === 2 && openEnds === 1) return 80
+  if (length === 1 && openEnds === 2) return 20
+  return 5
+}
+
+function scoreMoveForStone(board: GomokuBoard, point: GomokuPoint, stone: Exclude<Stone, null>) {
+  let score = 0
+
+  for (const [rowStep, colStep] of GOMOKU_DIRECTIONS) {
+    const forward = countDirection(board, point.row, point.col, stone, rowStep, colStep)
+    const backward = countDirection(board, point.row, point.col, stone, -rowStep, -colStep)
+    const forwardEndRow = point.row + (forward + 1) * rowStep
+    const forwardEndCol = point.col + (forward + 1) * colStep
+    const backwardEndRow = point.row - (backward + 1) * rowStep
+    const backwardEndCol = point.col - (backward + 1) * colStep
+    const openEnds = Number(isInBounds(forwardEndRow, forwardEndCol) && board[forwardEndRow]?.[forwardEndCol] === null) +
+      Number(isInBounds(backwardEndRow, backwardEndCol) && board[backwardEndRow]?.[backwardEndCol] === null)
+
+    score += lineScore(1 + forward + backward, openEnds)
+  }
+
+  return score
+}
+
+function scoreAgentMove(board: GomokuBoard, point: GomokuPoint) {
+  const offensive = scoreMoveForStone(board, point, 'white')
+  const defensive = scoreMoveForStone(board, point, 'black')
+  const centerBias = Math.max(0, 20 - distanceFromCenter(point))
+
+  return offensive * 1.15 + defensive + centerBias
+}
+
+function findAgentMove(board: GomokuBoard): GomokuPoint | null {
+  const moves = candidateMoves(board)
+
+  for (const move of moves) {
+    if (wouldWin(board, move, 'white')) return move
+  }
+
+  for (const move of moves) {
+    if (wouldWin(board, move, 'black')) return move
+  }
+
+  return moves.reduce<GomokuPoint | null>((bestMove, move) => {
+    if (!bestMove) return move
+    const moveScore = scoreAgentMove(board, move)
+    const bestScore = scoreAgentMove(board, bestMove)
+    if (moveScore > bestScore) return move
+    if (moveScore === bestScore && distanceFromCenter(move) < distanceFromCenter(bestMove)) return move
+    return bestMove
+  }, null)
 }
 
 function handleGomokuAction(context: AhipScenarioActionContext) {
@@ -798,20 +948,48 @@ function handleGomokuAction(context: AhipScenarioActionContext) {
     const row = payload.row
     const col = payload.col
 
+    const existingWinner = findGomokuWinner(board)
+    if (existingWinner) {
+      return createGomokuItem(
+        context.sessionId,
+        board,
+        existingWinner === 'black' ? 'You already won. Restart to play again.' : 'The agent already won. Restart to play again.',
+      )
+    }
+
+    if (!isValidGomokuPoint(row, col)) {
+      return createGomokuItem(context.sessionId, board, 'That point is not available. Choose another point.')
+    }
+
     if (board[row]?.[col]) {
       return createGomokuItem(context.sessionId, board, 'That cell is already occupied. Choose another point.')
     }
 
     board[row][col] = 'black'
+    if (hasFiveFrom(board, row, col, 'black')) {
+      return createGomokuItem(context.sessionId, board, `You placed ${row + 1},${col + 1}. You win.`)
+    }
+
+    if (isBoardFull(board)) {
+      return createGomokuItem(context.sessionId, board, 'Board is full. Draw.')
+    }
+
     const agentMove = findAgentMove(board)
     if (agentMove) {
       board[agentMove.row][agentMove.col] = 'white'
+      if (hasFiveFrom(board, agentMove.row, agentMove.col, 'white')) {
+        return createGomokuItem(
+          context.sessionId,
+          board,
+          `You placed ${row + 1},${col + 1}. Agent placed ${agentMove.row + 1},${agentMove.col + 1}. Agent wins.`,
+        )
+      }
     }
 
     return createGomokuItem(
       context.sessionId,
       board,
-      agentMove
+      agentMove && !isBoardFull(board)
         ? `You placed ${row + 1},${col + 1}. Agent placed ${agentMove.row + 1},${agentMove.col + 1}.`
         : 'Board is full.',
     )

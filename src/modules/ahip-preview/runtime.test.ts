@@ -16,6 +16,27 @@ const agent: AhipPreviewAgent = {
   updatedAt: new Date(0).toISOString(),
 }
 
+type TestStone = 'black' | 'white' | null
+
+function emptyTestBoard() {
+  return Array.from({ length: 15 }, () => Array.from({ length: 15 }, () => null as TestStone))
+}
+
+function withGomokuBoard(item: AHIPItem, board: TestStone[][]): AHIPItem {
+  return {
+    ...item,
+    widgets: item.widgets?.map((widget) => (
+      widget.widget_type === 'dev.vibly/gomoku_board'
+        ? { ...widget, props: { ...widget.props, board } }
+        : widget
+    )),
+  }
+}
+
+function getGomokuBoard(item: AHIPItem) {
+  return item.widgets?.find((widget) => widget.widget_type === 'dev.vibly/gomoku_board')?.props.board as TestStone[][]
+}
+
 describe('AHIP preview runtime', () => {
   it('keeps simple questions as plain text without an API key', async () => {
     const result = await generateAssistantMessage({
@@ -181,6 +202,89 @@ describe('AHIP preview runtime', () => {
 
     expect(actionResult.replaceSourceItem).toBe(true)
     expect(actionResult.trace.scenarioId).toBe('gomoku_widget')
+  })
+
+  it('blocks an immediate gomoku threat without using a model', async () => {
+    const result = await generateAssistantMessage({
+      agent,
+      apiKey: '',
+      sessionId: 'session_runtime_test',
+      userText: 'Let us play gomoku',
+      transcript: [],
+    })
+
+    expect(result.message.kind).toBe('ahip')
+    if (result.message.kind !== 'ahip') return
+
+    const board = emptyTestBoard()
+    board[7][7] = 'black'
+    board[7][8] = 'black'
+    board[7][9] = 'black'
+
+    const actionResult = handleAhipAction({
+      action: {
+        id: 'place_7_10',
+        label: 'Place 8,11',
+        kind: 'invoke_widget_action',
+        payload: {
+          widget_id: 'gomoku-preview',
+          action: 'place_stone',
+          row: 7,
+          col: 10,
+        },
+      },
+      item: withGomokuBoard(result.message.item, board),
+      agent,
+    })
+
+    expect(actionResult.message.kind).toBe('ahip')
+    if (actionResult.message.kind !== 'ahip') return
+    const nextBoard = getGomokuBoard(actionResult.message.item)
+
+    expect([nextBoard[7][6], nextBoard[7][11]]).toContain('white')
+  })
+
+  it('declares gomoku win before the agent moves again', async () => {
+    const result = await generateAssistantMessage({
+      agent,
+      apiKey: '',
+      sessionId: 'session_runtime_test',
+      userText: 'Let us play gomoku',
+      transcript: [],
+    })
+
+    expect(result.message.kind).toBe('ahip')
+    if (result.message.kind !== 'ahip') return
+
+    const board = emptyTestBoard()
+    board[7][7] = 'black'
+    board[7][8] = 'black'
+    board[7][9] = 'black'
+    board[7][10] = 'black'
+
+    const actionResult = handleAhipAction({
+      action: {
+        id: 'place_7_11',
+        label: 'Place 8,12',
+        kind: 'invoke_widget_action',
+        payload: {
+          widget_id: 'gomoku-preview',
+          action: 'place_stone',
+          row: 7,
+          col: 11,
+        },
+      },
+      item: withGomokuBoard(result.message.item, board),
+      agent,
+    })
+
+    expect(actionResult.message.kind).toBe('ahip')
+    if (actionResult.message.kind !== 'ahip') return
+    const nextBoard = getGomokuBoard(actionResult.message.item)
+    const whiteStones = nextBoard.flat().filter((stone) => stone === 'white')
+
+    expect(whiteStones).toHaveLength(0)
+    expect(JSON.stringify(actionResult.message.item)).toContain('You win')
   })
 
   it('uses AHIP fallback for non-registered board games', async () => {

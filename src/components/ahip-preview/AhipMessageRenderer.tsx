@@ -29,6 +29,12 @@ function getBoard(widget: WidgetRef) {
 const gomokuRenderer: AHIPWidgetRenderer = ({ widget, item, host }) => {
   const board = getBoard(widget)
   const note = typeof widget.props.note === 'string' ? widget.props.note : 'Place a stone.'
+  const terminal = widget.props.terminal === true
+  const winner = widget.props.winner === 'black'
+    ? 'Black wins'
+    : widget.props.winner === 'white'
+      ? 'White wins'
+      : null
 
   return (
     <section className="space-y-3" data-ahip-widget="dev.vibly/gomoku_board">
@@ -40,6 +46,7 @@ const gomokuRenderer: AHIPWidgetRenderer = ({ widget, item, host }) => {
         <div className="flex gap-2 text-xs text-muted">
           <span>Black: you</span>
           <span>White: agent</span>
+          {winner ? <span className="text-primary">{winner}</span> : null}
         </div>
       </div>
       <div className="grid w-full max-w-[480px] grid-cols-[repeat(15,minmax(0,1fr))] overflow-hidden border border-default bg-secondary">
@@ -50,7 +57,7 @@ const gomokuRenderer: AHIPWidgetRenderer = ({ widget, item, host }) => {
               type="button"
               className="aspect-square border border-default bg-surface p-0 text-[10px] leading-none transition hover-bg-muted"
               aria-label={`Place stone at row ${rowIndex + 1}, column ${colIndex + 1}`}
-              disabled={Boolean(cell)}
+              disabled={Boolean(cell) || terminal}
               onClick={() => {
                 void host.actionDispatcher?.dispatchAction(
                   {
