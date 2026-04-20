@@ -10,13 +10,16 @@ import './styles/tokens.css'
 import './styles/theme.css'
 import './index.css'
 
+const routerBasename =
+  import.meta.env.BASE_URL === '/' ? undefined : import.meta.env.BASE_URL.replace(/\/$/, '')
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ThemeProvider>
       <I18nProvider>
         <MvpProvider>
           <AhipPreviewProvider>
-            <BrowserRouter>
+            <BrowserRouter basename={routerBasename}>
               <App />
             </BrowserRouter>
           </AhipPreviewProvider>
